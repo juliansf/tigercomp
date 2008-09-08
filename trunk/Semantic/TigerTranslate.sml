@@ -51,6 +51,7 @@ struct
 	fun seq [a] = a
 		| seq (a::b::[]) = SEQ(a,b)
 		| seq (a::xs) = SEQ(a,seq xs)
+		| seq _ = Error ( ErrorInternalError "problemas con Translate.seq!", 0)
 	
 	(* Funciones desempaquetadoras de expresiones *)
 	fun unEx (Ex e) = e
@@ -187,7 +188,7 @@ struct
 		in
 			Nx (seq [ MOVE (index', unEx lo),
 				MOVE (TEMP tmphi, unEx hi),
-				CJUMP (GT, index', TEMP tmphi, loop, sale),
+				CJUMP (GT, index', TEMP tmphi, sale, loop),
 				LABEL sigue,
 				MOVE (index', BINOP (PLUS, index', CONST 1)),
 				LABEL loop,
