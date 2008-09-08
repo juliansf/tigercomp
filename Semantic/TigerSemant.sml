@@ -157,10 +157,11 @@ struct
 							
 							fun checkExp (exp :: []) = ( lastexp := trexp exp; [] )
 								| checkExp (exp :: expl) = #exp(trexp exp) :: checkExp expl
+								| checkExp _ = Error ( ErrorInternalError "problemas con Semant.transExp.trexp( SeqExp .. ).checkExp!", pos )
 								
 							val expl' =  #exp(firstexp) :: checkExp (tl expl)
 						in
-							{ exp=seqExp (expl', #exp(!lastexp), #ty(!lastexp) = UNIT), ty=(#ty(firstexp)) }
+							{ exp=seqExp (expl', #exp(!lastexp), #ty(!lastexp) = UNIT), ty=(#ty(!lastexp)) }
 						end
 						
 				| trexp ( AssignExp ({ var, exp }, pos) ) =
@@ -236,7 +237,7 @@ struct
 						let
 							val { venv=venv', tenv=tenv', decs=expdecs} =
 								List.foldl (fn (x,y) => transDec (#venv(y), #tenv(y), x, level, #decs(y))) 
-													 {venv=venv, tenv=tenv, decs=[]} decs
+													 {venv=fromTable venv, tenv=fromTable tenv, decs=[]} decs
 							
 							val { exp=expbody, ty=tybody } = transExp ( venv', tenv', body, level )
 						in
@@ -377,7 +378,11 @@ struct
 					val venv' = fromTable venv
 					val _ = List.app (insertField venv') params
 					
-					val (FunEntry r) = valOf (tabSearch venv name)
+					(* Pattern Matching exhaustivo de val (FunEntry r) = valOf( tabSearch venv name ) *)
+					val r = case tabSearch venv name of
+							SOME (FunEntry r') => r'
+						| _ => Error (ErrorInternalError "problemas con Seman.transDec.trdec2->r!", pos)
+						
 					val { exp=expbody, ty=tybody } = transExp (venv', tenv, body, #level(r))
 					
 					val tyres = case tabSearch venv name of

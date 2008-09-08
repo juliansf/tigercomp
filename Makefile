@@ -1,6 +1,6 @@
 # Unix makefile for tigermain
 
-HOME=/usr/share
+HOME=/usr/local
 MOSMLHOME=${HOME}/mosml
 MOSMLTOOLS=camlrunm $(MOSMLHOME)/tools
 MOSMLLEX=mosmllex

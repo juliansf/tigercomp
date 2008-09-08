@@ -1,5 +1,5 @@
 for i:= 1 to 10 do
 	(let var i:= 0 in
-		(print(""); i; flush())
+		(print("Hola!"); i; flush())
 	end;
 	i; ())
