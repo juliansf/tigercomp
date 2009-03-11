@@ -34,7 +34,9 @@ struct
 	
 	fun newLevel 
 	(parent:level, name, formals) =
-		{depth = #depth(parent) + 1, lstack = ref [], frame = newFrame (namedlabel2 name, formals), parent = SOME (#frame(parent)) }
+		{depth = #depth(parent) + 1, lstack = ref [], 
+		 frame = newFrame (namedlabel2 name, formals), 
+		 parent = SOME (#frame(parent)) }
 		
 	fun getLevelLabel (level:level) = getFrameLabel(#frame(level))
 	

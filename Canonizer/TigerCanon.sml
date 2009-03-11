@@ -18,8 +18,11 @@ struct
 		fun commute(EXP(CONST _), _) = true
 		  | commute(_, NAME _) = true
 		  | commute(_, CONST _) = true
-		 (* | commute(EXP(CALL(NAME "_checkIndexArray", _)), _) = true
-		  | commute(EXP(CALL(NAME "_checkNil", _)), _) = true *)
+		 	| commute(EXP(CALL(NAME l, _)), _) = 
+		 			(case TigerTemp.labelname l of 
+		 				"_checkIndexArray" => true 
+		 			| "_checkNil" => true 
+		 			| _ => false)
 		  | commute(EXP x, y) =
 		    let	fun inmut(NAME _) = true
 			  | inmut(CONST _) = true
