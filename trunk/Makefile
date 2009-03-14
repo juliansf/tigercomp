@@ -1,6 +1,6 @@
 # Unix makefile for tigermain
 
-HOME=/usr/local
+HOME=/opt/local
 MOSMLHOME=${HOME}/mosml
 MOSMLTOOLS=camlrunm $(MOSMLHOME)/tools
 MOSMLLEX=mosmllex
@@ -8,8 +8,8 @@ MOSMLYACC=mosmlyac -v
 
 GCC=gcc
 CFLAGS= -g
-MOSMLC=${MOSMLHOME}/bin/mosmlc -c -liberal
-MOSMLL=${MOSMLHOME}/bin/mosmlc
+MOSMLC=mosmlc -c -liberal
+MOSMLL=mosmlc
 
 # Unix
 REMOVE=rm -f
@@ -29,10 +29,11 @@ LEXER=./Lexer
 PARSER=Parser
 SEMANTIC=Semantic
 CANON=Canonizer
+CODEGEN=CodeGen
 MISC=Misc
 BIN=bin
 
-LOADPATH=-I $(LEXER) -I $(PARSER) -I $(MISC) -I $(SEMANTIC) -I $(CANON)
+LOADPATH=-I $(LEXER) -I $(PARSER) -I $(MISC) -I $(SEMANTIC) -I $(CANON) -I $(CODEGEN) 
 
 .SUFFIXES :
 .SUFFIXES : .sig .sml .ui .uo
@@ -55,6 +56,8 @@ GRALOBJS= \
 	TigerEnv.uo \
 	TigerSemant.uo \
 	TigerCanon.uo \
+	TigerAssem.uo \
+	TigerCodeGen.uo \
 	tigerpp.uo \
 	tigermain.uo
 
@@ -103,6 +106,10 @@ clean:
 	$(REMOVE) *.ui;\
 	$(REMOVE) *.uo
 	
+	$(CD) $(CODEGEN);\
+	$(REMOVE) *.ui;\
+	$(REMOVE) *.uo
+	
 	$(REMOVE) tigermain
 	$(REMOVE) *.ui
 	$(REMOVE) *.uo
@@ -148,6 +155,11 @@ TigerSemant.uo:
 	$(MOSMLC) $(LOADPATH) $(SEMANTIC)/TigerSemant.sig $(SEMANTIC)/TigerSemant.sml
 TigerCanon.uo:
 	$(MOSMLC) $(LOADPATH) $(CANON)/TigerCanon.sig $(CANON)/TigerCanon.sml
+TigerAssem.uo:
+	$(MOSMLC) $(LOADPATH) $(CODEGEN)/TigerAssem.sig $(CODEGEN)/TigerAssem.sml
+TigerCodeGen.uo:
+	$(MOSMLC) $(LOADPATH) $(CODEGEN)/TigerPPCGen.sig $(CODEGEN)/TigerPPCGen.sml \
+						  $(CODEGEN)/TigerCodeGen.sig $(CODEGEN)/TigerCodeGen.sml
 tigerpp.uo:
 	$(MOSMLC) $(LOADPATH) $(MISC)/tigerpp.sml
 	
