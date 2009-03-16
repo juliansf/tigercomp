@@ -6,6 +6,18 @@ struct
 	structure T = TigerTree
 	structure A = TigerAssem
 	
+	fun sign i = if (i < 0) then "-"^makestring(~i) else makestring(i)
+	
+	fun relOp relop =
+		case relop of
+			EQ 	=>	"eq"	|	NE	=>	"ne"	
+		|	LT	=>	"lt"	|	LE	=>	"le"	
+		|	GT	=>	"gt"	|	GE	=>	"ge"	
+		|	ULT	=>	"lt"	|	ULE	=>	"le"
+		|	UGT	=>	"gt"	|	UGE	=>	"ge"
+	
+	fun munchArgs i args = [TigerFrame.CR0] (* placeholder *)
+	
 	fun codegen frame (stm: T.stm) : A.instr list =
 		let 
 			val ilist = ref (nil: A.instr list)
@@ -13,21 +25,75 @@ struct
 			fun result (gen) = let val t = TigerTemp.newtemp() in gen t; t end
 			
 			fun munchStm (T.SEQ (a,b)) = (munchStm a; munchStm b)
-			 |	munchStm (T.MOVE(T.TEMP i, T.MEM(T.BINOP(T.PLUS, T.CONST j, e)))) = ()
-			 |	munchStm (T.MOVE(T.TEMP i, T.MEM(T.BINOP(T.PLUS, e, TCONST j)))) = ()
-			 |	munchStm (T.MOVE(T.TEMP i, T.MEM e)) = ()
-			 |	munchStm (T.MOVE(T.TEMP i, T.CONST j)) = ()
-			 |	munchStm (T.MOVE(T.TEMP i, e)) = ()
-			 |	munchStm (T.MOVE(T.MEM(T.BINOP(T.PLUS, T.CONST i, e1)), e2)) = ()
+			
+			 |	munchStm (T.MOVE(T.TEMP t, T.MEM(T.BINOP(T.PLUS, T.CONST j, e)))) = 
+			 			emit (A.OPER {assem="lwz `d0, " ^ sign j ^ "(`s0)\n", 
+			 										dst=[t], src=[munchExp e], jump=NONE})
+			 			
+			 |	munchStm (T.MOVE(T.TEMP i, T.MEM(T.BINOP(T.PLUS, e, TCONST j)))) = 
+			 			emit (A.OPER {assem="lwz `d0, " ^ sign j ^ "(`s0)\n", 
+			 										dst=[t], src=[munchExp e], jump=NONE})
+			 									
+			 |	munchStm (T.MOVE(T.TEMP t, T.MEM e)) = 
+			 			emit (A.OPER {assem="la `d0, (`s0)\n", 
+			 										dst=[t], src=[munchExp e], jump=NONE})
+			 									
+			 |	munchStm (T.MOVE(T.TEMP t, T.CONST j)) =
+			 			emit (A.OPER {assem="li `d0, " ^ sign j ^ "\n",
+			 										dst=[t], src=[], jump=NONE})
+			 			
+			 |	munchStm (T.MOVE(T.TEMP t, e)) =
+			 			emit (A.MOVE {assem="mr `d0, `s0\n",
+			 										dst=t, src=munchExp e})
+			 										
+			 |	munchStm (T.MOVE(T.MEM(T.BINOP(T.PLUS, T.CONST i, e1)), e2)) =
+			 			emit (A.OPER {assem="stw `s0, " ^ sign i ^ "(`d0)\n",
+			 										dst=[munchExp e1], src=[munchExp e2], jump=NONE})
+			 										
 			 |	munchStm (T.MOVE(T.MEM(T.BINOP(T.PLUS, e1, T.CONST i)), e2)) = ()
+			 			emit (A.OPER {assem="stw `s0, " ^ sign i ^ "(`d0)\n",
+			 										dst=[munchExp e1], src=[munchExp e2], jump=NONE})
+			 
+			 (*										
 			 |	munchStm (T.MOVE(T.MEM(T.CONST i), e)) = ()
-			 |	munchStm (T.MOVE(T.MEM e1, T.MEM e2)) = ()
-			 |	munchStm (T.MOVE(T.MEM e1, e2)) = ()
-			 |	munchStm (T.JUMP(T.NAME l, labels)) = ()
-			 |	munchStm (T.JUMP(e, labels)) = ()
-			 |	munchStm (T.EXP(T.CALL(e, args))) = ()
-			 |	munchStm (T.CJUMP(relop, e1, e2, lv, lf)) = ()
-			 |	munchStm (T.LABEL l) = ()
+			 			emit (A.OPER {assem="stw `s0, " ^ sign i ^ "(r0)\n",
+			 										dst=[], src=[munchStm], jump=NONE})
+			 *)
+			 
+			 |	munchStm (T.MOVE(T.MEM e1, e2)) = 
+			 			emit (A.OPER {assem="stw `s0, 0(`d0)\n",
+			 										dst=[munchExp e1], src=[munchExp e2], jump=NONE})
+			 										
+			 |	munchStm (T.JUMP(T.NAME l, labels)) =
+			 			emit (A.OPER {assem="ba " ^ TigetTemp.labelname l ^ "\n",
+			 										dst=[], src=[], jump=SOME labels})
+			 			
+			 |	munchStm (T.JUMP(e, labels)) =
+			 			emit (A.OPER {assem="ba `s0\n",
+			 										dst=[], src=[munchExp e], jump=SOME labels})
+			 										
+			 |	munchStm (T.EXP(T.CALL(e, args))) =
+			 			emit (A.OPER {assem="bl `s0\n",
+			 										dst=TigerFrame.calldefs,
+			 										src=munchExp e :: munchArgs(0, args),
+			 										jump=NONE})
+			 
+			 |	munchStm(T.EXP(e)) =
+			 			emit (A.MOVE {assem="mr `d0, `s0\n",
+			 										dst=TigerTemp.newtemp(), src=munchExp e})
+			 
+			 |	munchStm (T.CJUMP(relop, e1, e2, lv, lf)) = 
+			 			(
+			 				emit (A.OPER {assem="cmpw `d0, `s0, `s1\n",
+			 											dst=[TigerFrame.CR0], 
+			 											src=[munchExp e1, munchExp e2], 
+			 											jump=NONE});
+			 				emit (A.OPER {assem= relOp relop ^ ", " ^ TigerTemp.labelname lv ^ "\n",
+			 											dst=[], src=[TigerFrame.CR0], jump=SOME [lv, lf]})
+			 			)
+			 			
+			 |	munchStm (T.LABEL l) =
+			 			emit (A.LABEL {assem=TigerTemp.labelname l ^ ":\n", lab=l})
 			
 			and munchExp (T.CONST 0) = result ()
 			 |	munchExp (T.CONST i) = result ()
