@@ -50,10 +50,9 @@ struct
 	| Nx of TigerTree.stm (* No Result *)
 	| Cx of TigerTemp.label * TigerTemp.label -> TigerTree.stm (* Condicion *)
 
-	fun seq [a] = a
-		| seq (a::b::[]) = SEQ(a,b)
-		| seq (a::xs) = SEQ(a,seq xs)
-		| seq _ = Error ( ErrorInternalError "problemas con Translate.seq!", 0)
+	fun seq [] = Error ( ErrorInternalError "problemas con Translate.seq!", 0)
+		| seq [a] = a
+		| seq (a::b::xs) = SEQ(a,seq (b::xs))
 	
 	(* Funciones desempaquetadoras de expresiones *)
 	fun unEx (Ex e) = e
