@@ -6,7 +6,8 @@ sig
 	
 	datatype instr = OPER of {assem: string,
 														dst: temp list,
-														src: label list option}
+														src: temp list,
+														jump: label list option}
 								 | LABEL of {assem: string,
 								 						 lab: label}
 								 | MOVE of {assem: string,
