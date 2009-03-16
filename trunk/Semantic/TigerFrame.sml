@@ -10,6 +10,7 @@ struct
 	datatype frag = PROC of { body : TigerTree.stm, frame : frame }
 							| STRING of TigerTemp.label * string
 	
+	val CR0 = namedtemp("cr0")
 	val RV = namedtemp("RV")
 	val FP = namedtemp("FP")
 	val SP = namedtemp("SP")
