@@ -10,11 +10,23 @@ struct
 	datatype frag = PROC of { body : TigerTree.stm, frame : frame }
 							| STRING of TigerTemp.label * string
 	
-	val CR0 = namedtemp("cr0")
-	val RV = namedtemp("RV")
-	val FP = namedtemp("FP")
-	val SP = namedtemp("SP")
-	val registers = ["RV","FP","SP"]
+	(* Crea la lista ["sm","s(m+1)",...,"sn"] *)
+	fun mkRegs s m n = 
+		let 
+			fun f i j rl = 
+				if i <= j 
+				then s^makestring(i) :: f (i+1) j rl 
+				else rl 
+		in f m n [] end
+	
+	val ZERO = namedtemp("r0")
+	val RV = namedtemp("r3")
+	val SP = namedtemp("r1")
+	val params = mkRegs 3 10
+	val volatile = ["r0"] @ params @ ["r11", "r12"]
+	val nonvolatile = mkRegs 14 31
+	val dedicated = ["r1", "r2", "r13"]
+	val registers = volatile @ nonvolatile
 	val tempMap = tabNueva()
 	val wordSize = 8
 	val prologSize = wordSize * 1
