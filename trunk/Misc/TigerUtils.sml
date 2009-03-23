@@ -2,11 +2,12 @@ structure TigerUtils =
 struct
 	open TigerTypes
 	open TigerError
+	open TigerAbs
 
 	fun isInt x = case x of INT _ => true | _ => false
 	
 	fun showtype ty = showtype' ty 2
-	and showtype' ty deep=
+	and showtype' ty deep =
 		case ty of
 				INT RW => "int rw"
 			| INT RO => "int ro"

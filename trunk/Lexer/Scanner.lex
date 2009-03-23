@@ -94,8 +94,7 @@ rule Token =
   | L LDU*								{ ID { data=getLexeme lexbuf, pos=Line() } }
 
   (* Numeros *)
-  | "0"                   { NUM { data=0, pos=Line() } }
-  | [`1`-`9`][`0`-`9`]*   { NUM { data=atoi (getLexeme lexbuf), pos=Line() } }
+  | D+   { NUM { data=atoi (getLexeme lexbuf), pos=Line() } }
 
   (* Inicio de una String *)
   | `"`                  { STRING { data=String1 lexbuf, pos=Line() } }

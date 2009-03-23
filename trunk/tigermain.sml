@@ -23,6 +23,7 @@ fun main(tigername, args) =
 		val canon = ref false
 		val arbol_canon = ref false
 		val code = ref false
+		val code_list = ref false
 		val flow = ref false
 		val inter = ref false
 		val asm = ref false
@@ -38,6 +39,9 @@ fun main(tigername, args) =
 			| "-canon" => (canon := true; false)
 			| "-canontree" => (arbol_canon := true; false)
 			| "-canon-all" => (escapes := true; ir := true; canon := true; false)
+			| "-code" => (code := true; false)
+			| "-codelist" => (code_list := true; false)
+      | "-code-all" => (escapes := true; ir := true; canon := true; code := true; false)
 			| "-flow" => (flow := true; false)
 			| "-inter" => (inter := true; false)
 			| "-s" => (asm := true; false)
@@ -78,12 +82,34 @@ fun main(tigername, args) =
 			in
 				if !arbol_ir then 
 					(print "\n::: IR TREE :::\n"; List.app tigerpp.ppfrag lfrag) else ();
+				
 				if !canon then
 					let
 						val lfrag = TigerCanon.canonize lfrag
 					in
 						if !arbol_canon then 
-							(print "\n::: CANONICAL TREE :::\n"; List.app tigerpp.ppCanonFrag lfrag) else ()
+							(print "\n::: CANONICAL TREE :::\n"; List.app tigerpp.ppCanonFrag lfrag) else ();
+						
+						if !code then
+							let
+								val literals = List.filter (fn frag => 
+											case frag of TigerCanon.LITERAL _ => true | _ => false) lfrag
+								
+								val fragments = List.filter (fn frag => 
+											case frag of TigerCanon.FUNC _ => true | _ => false) lfrag
+								
+								fun codegen (TigerCanon.FUNC {body, frame}) = 
+											(TigerFrame.procEntryExit2 
+												(frame, List.concat (List.map (fn s => TigerCodeGen.codegen frame s) body)), frame)
+								 
+								val lfrag2 = List.map codegen fragments
+							in
+								if !code_list then 
+									List.app (fn (l,f) => 
+										List.app (print o (TigerAssem.format TigerTemp.tempname)) l) lfrag2 
+								else ()
+							end
+						else ()
 					end
 				else ()
 			end

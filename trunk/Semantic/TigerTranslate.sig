@@ -7,7 +7,7 @@ sig
 	
 	val getResult : unit -> TigerFrame.frag list
 	val addProc : TigerTree.stm * TigerFrame.frame -> unit
-	val addString : TigerTemp.label * string -> unit
+	val addString : string -> TigerTemp.label
 	
 	val outermost : level
 	val newLevel : level * string * bool list -> level
@@ -36,7 +36,7 @@ sig
 	val stringExp : string -> exp
 	val callExp : TigerTemp.label * exp list * level * level * bool -> exp
 	val opExp : TigerAbs.oper * exp * exp -> exp
-	val recordExp : exp list -> exp
+	val recordExp : exp list * level -> exp
 	val seqExp : exp list * exp * bool -> exp
 	val assignExp : exp * exp -> exp
 	val ifExp : exp * exp * exp * TigerAbs.ifop * bool -> exp
@@ -44,11 +44,11 @@ sig
 	val forExp : access * exp * exp * exp * level -> exp
 	val letExp : exp list * exp * bool -> exp
 	val breakExp: level -> exp
-	val arrayExp: exp * exp -> exp
+	val arrayExp: exp * exp * level -> exp
 	
 	val simpleVar : access * level -> exp
-	val fieldVar : exp * int -> exp
-	val subscriptVar : exp * exp -> exp
+	val fieldVar : exp * int * level -> exp
+	val subscriptVar : exp * exp * level -> exp
 	
 	val varDec : access * exp -> exp
 end

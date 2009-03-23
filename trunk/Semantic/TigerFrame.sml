@@ -3,73 +3,173 @@ struct
 	open TigerTemp
 	open tigertab
 	open TigerTree
+	
+	structure A = TigerAssem
+	
 	type register = string
 	datatype access = InFrame of int | InReg of TigerTemp.temp
-	type frame = {localOffset: int ref, formals: access list, label: TigerTemp.label}
+	type frame = {localOffset: int ref, 
+								formals: access list, 
+								label: TigerTemp.label, 
+								leaf: bool ref, 
+								maxArgs: int ref}
 	
 	datatype frag = PROC of { body : TigerTree.stm, frame : frame }
 							| STRING of TigerTemp.label * string
+							
+	val framesTable = tabNueva ()
+		
+	(* Usamos este temp como un placeholder para reemplazarlo por 
+		 el offset correspondiente en TigerAssem.format *)
+	val VarAreaOffset = namedtemp("VarAreaOffset") 
 	
-	(* Crea la lista ["sm","s(m+1)",...,"sn"] *)
-	fun mkRegs s m n = 
-		let 
-			fun f i j rl = 
-				if i <= j 
-				then s^makestring(i) :: f (i+1) j rl 
-				else rl 
-		in f m n [] end
+	val FP = namedtemp("fp") (* No tenemos frame pointer, se reemplaza en CodeGen por SP+fs *)
 	
-	val ZERO = namedtemp("r0")
-	val RV = namedtemp("r3")
-	val SP = namedtemp("r1")
-	val params = mkRegs 3 10
-	val volatile = ["r0"] @ params @ ["r11", "r12"]
-	val nonvolatile = mkRegs 14 31
-	val dedicated = ["r1", "r2", "r13"]
-	val registers = volatile @ nonvolatile
-	val tempMap = tabNueva()
-	val wordSize = 8
+	val ZERO = namedtemp("r0") (* Language Specific *)
+	
+	val SP = namedtemp("r1") (* Stack Pointer *)
+	val R2 = namedtemp("r2") (* Read-only small data area anchor *)
+	val RV = namedtemp("r3") (* Parameter Passing / Return Value *)
+	
+	val R4 = namedtemp("r4") (* Parameter Passing Regs *)
+	val R5 = namedtemp("r5")
+	val R6 = namedtemp("r6")
+	val R7 = namedtemp("r7")
+	val R8 = namedtemp("r8")
+	val R9 = namedtemp("r9")
+	val R10 = namedtemp("r10")
+	
+	val R11 = namedtemp("r11")
+	val R12 = namedtemp("r12")
+	
+	val R13 = namedtemp("r13") (* Read-write small data area anchor *)
+	
+	val R14 = namedtemp("r14") (* Non-volatile registers *)
+	val R15 = namedtemp("r15")
+	val R16 = namedtemp("r16")
+	val R17 = namedtemp("r17")
+	val R18 = namedtemp("r18")
+	val R19 = namedtemp("r19")
+	val R20 = namedtemp("r20")
+	val R21 = namedtemp("r21")
+	val R22 = namedtemp("r22")
+	val R23 = namedtemp("r23")
+	val R24 = namedtemp("r24")
+	val R25 = namedtemp("r25")
+	val R26 = namedtemp("r26")
+	val R27 = namedtemp("r27")
+	val R28 = namedtemp("r28")
+	val R29 = namedtemp("r29")
+	val R30 = namedtemp("r30")
+	val R31 = namedtemp("r31")
+	
+	val CR = namedtemp("cr") (* Condition Register *)
+	val LR = namedtemp("lr") (* A este registro solo se accede mediante instrucciones especiales *)
+	
+	val specialregs = [SP, R2, R13, CR]
+	val argregs = [RV, R4, R5, R6, R7, R8, R9, R10]
+	val calleesaves = [R14, R15, R16, R17, R18, R19, R20, R21, R22, 
+									 R23, R24, R25, R26, R27, R28, R29, R30, R31]
+	val callersaves = [ZERO, R11, R12]
+	
+	val calldefs = callersaves @ argregs
+	val registers = [ZERO]
+	
+	val wordSize = 4
 	val prologSize = wordSize * 1
-	val incrLocal = ~wordSize
+	val linkAreaSize = 6 * wordSize (* 6 words *)
+	val LRSaveOffset = 2 * wordSize
+	val incrLocal = wordSize
 	fun externalCall (name, params) = CALL (NAME (namedlabel(name)), params)
 
 	fun newFrame (name, formals) =
 		let
-			val argsoffset = ref 0
-			fun processFormals (arg, argList) = 
-				case arg of true => (argsoffset := !argsoffset - incrLocal;
-														 InFrame(!argsoffset) :: argList) 
-										|false => InReg (newtemp()) :: argList
-		in																																								
-			{localOffset = ref 0, formals = List.foldl processFormals [] (true::formals), label = name}		(*true::formals es para dejar como 1er arg al static link*)
+			(* Los primeros 8 argumentos van en Registros *)
+			fun procFormals _ _ [] = []
+			 |	procFormals offset [] (a::args) = 
+			 			InFrame(offset) :: procFormals (offset+wordSize) [] args
+			 |	procFormals offset (r::aregs) (a::args) = 
+			 			(case a of
+			 					true => InFrame(offset)
+			 				|	false => InReg(r)) :: procFormals (offset+wordSize) aregs args
+			
+			val frame = {localOffset = ref 0, 
+									 formals = procFormals linkAreaSize argregs (true::formals), 
+									 label = name,
+									 leaf = ref true,
+									 maxArgs = ref 0}		(*true::formals es para dejar como 1er arg al static link*)
+			
+		in																												
+			(tabInsert framesTable (name, ref frame); frame)
 		end
 			
-	fun formals {localOffset, formals, label} = formals
+	fun getFormals (frame:frame) = #formals(frame)
+	fun getFrameLabel (frame:frame) = #label(frame)
+	fun isLeaf (frame:frame) = !(#leaf(frame))
+	fun getMaxCallArgs (frame:frame) = !(#maxArgs(frame))
+	fun getLocalOffset (frame:frame) = !(#localOffset(frame))
 	
-	fun name {localOffset, formals, label} = label
+	fun varAreaOffset label = 
+		let
+			val frame = valOf (tabSearch framesTable label)
+		in
+			wordSize * !(#maxArgs(!frame)) + linkAreaSize
+		end
 	
-	fun allocLocal {localOffset, formals, label} escapes =
+	fun setMaxCallArgs (frame:frame) n =
+		let
+			val leaf = #leaf(frame)
+			val maxArgs = #maxArgs(frame)
+		in
+			leaf := false;
+			if n > !maxArgs then maxArgs := n else ()
+		end
+	
+	fun allocLocal {localOffset, formals, label, leaf, maxArgs} escapes =
 		if escapes
-		then (localOffset := !localOffset + incrLocal; InFrame(!localOffset) )
+		then (localOffset := !localOffset + incrLocal; InFrame(!localOffset-incrLocal) )
 		else InReg (newtemp())
 									 
 	fun string label s = labelname(label) ^ ": .ascii \"" ^ s ^ "\"\n"
 	
 	fun sl_access ~1 = TEMP FP
-		| sl_access 0 = MEM (BINOP (PLUS, CONST prologSize, TEMP FP))
-		| sl_access n = MEM (BINOP (PLUS, CONST prologSize, sl_access (n-1)))
+		| sl_access 0 = MEM (BINOP (PLUS, CONST linkAreaSize, TEMP FP))
+		| sl_access n = MEM (BINOP (PLUS, CONST linkAreaSize, sl_access (n-1)))
 	
-	fun var_access (InReg t, _) = TEMP t
-		| var_access (InFrame off, n) =
+	fun var_access (InReg t, _, _) = TEMP t
+		| var_access (InFrame off, n, (frame:frame)) =
 				let 
-					fun aux 0 = TEMP FP
-					  | aux n = MEM (BINOP (PLUS, CONST prologSize, aux (n-1)))
-				in MEM (BINOP (PLUS, CONST off, aux n)) end
-	
-	fun getFrameLabel (frame:frame) = #label(frame)
-	
-	fun procEntryExit1 (body, frame) = body
-(*	val procEntryExit2 : frame * TigerAssem.instr list -> TigerAssem.inst list
-	val procEntryExit3 : frame * TigerAssem.instr list -> 
+					fun aux 0 = TEMP SP
+					  | aux n = MEM (BINOP (PLUS, CONST linkAreaSize, aux (n-1)))
+				in MEM (VARACCESS (off, #label(frame), (aux n))) end
+
+	fun procEntryExit1 (body, {localOffset, formals, label, leaf, maxArgs}) = 
+		let
+			fun copyArg (InReg r) = MOVE (TEMP (newtemp()), TEMP r)
+			 |	copyArg (InFrame off) = MOVE (TEMP (newtemp()), MEM(BINOP(PLUS, CONST off, TEMP SP)))
+			
+			fun saveReg r = 
+				let 
+					val t = newtemp()
+				in 
+					(MOVE (TEMP t, TEMP r), MOVE (TEMP r, TEMP t))
+				end
+			
+			fun saveLR proc = 
+				if !leaf then TigerTree.seq proc
+				else 
+					let val t = newtemp()
+					in TigerTree.seq ([MOVE (TEMP t, TEMP LR) ] @ proc @ [MOVE (TEMP LR, TEMP t)]) end
+				
+			val argsMoves = List.map copyArg formals
+			val (entry, exit) = ListPair.unzip (List.map saveReg calleesaves)
+		in 
+			saveLR (entry @ argsMoves @ [body] @ exit) 
+		end
+
+	fun procEntryExit2 (frame, body) =
+		body @ [A.OPER {assem="blr\n", src=[SP]@calleesaves, dst=[], jump=SOME[]}]
+		
+(*	val procEntryExit3 : frame * TigerAssem.instr list -> 
 												{ prolog : string, body : TigerAssem.instr list, epiloge : string }*)
 end
