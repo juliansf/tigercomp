@@ -8,6 +8,7 @@ struct
 	|	MEM of exp
 	|	CALL of exp * exp list
 	| ESEQ of stm * exp
+	| VARACCESS of int * TigerTemp.label * exp
 	
 	and stm = 
 		MOVE of exp * exp
@@ -25,4 +26,9 @@ struct
 	and relop =
 		EQ | NE | LT | LE | GT | GE (* signed *)
 	| ULT | ULE | UGT | UGE (* unsigned *)
+	
+	
+	fun seq [] = TigerError.Error ( TigerError.ErrorInternalError "problemas con Tree.seq!", 0)
+		| seq [a] = a
+		| seq (a::b::xs) = SEQ(a,seq (b::xs))
 end

@@ -1,6 +1,7 @@
 structure TigerError =
 struct
 	open TigerProgName
+	open TigerAbs
 	
 	exception InternalError of string
 	exception UndefinedType of string

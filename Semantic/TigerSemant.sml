@@ -9,8 +9,8 @@ struct
 	open TigerTranslate
 	
 	type venv = (string, enventry) Tabla 
-	type tenv = (string, ty) Tabla
-	type expty = { exp: TigerTranslate.exp, ty:ty }
+	type tenv = (string, TigerTypes.ty) Tabla
+	type expty = { exp: TigerTranslate.exp, ty:TigerTypes.ty }
 	
 	(******************************************************)
 	(* TransExp:                                          *)
@@ -146,7 +146,7 @@ struct
 						in
 							List.app (checkField defl) realfields;
 							case List.map checkError (!defl) @ (!errorList) of
-								[] => {exp=recordExp (rev (!expList)), ty=rty}
+								[] => {exp=recordExp (rev (!expList), level), ty=rty}
 								| l => Error (ErrorRecordFields (rev l), pos)
 						end
 
@@ -259,7 +259,7 @@ struct
                 Error ( ErrorArrayTypeMismatch typ, pos ) else ())			
               handle InternalError msg => Error ( ErrorInternalError msg, pos );				
 
-							{ exp=arrayExp (expsize, expinit), ty=ARRAY (aty, auniq) }
+							{ exp=arrayExp (expsize, expinit, level), ty=ARRAY (aty, auniq) }
 						end						
 		in
 			trexp expr
@@ -287,7 +287,7 @@ struct
 			val offset = ref ~1
 		in
 			case List.find (fn (x,y) => (offset := !offset + 1; x = symbol)) ml of
-				SOME (sym,ty) => { exp=fieldVar(expvar, !offset), ty=ty }
+				SOME (sym,ty) => { exp=fieldVar(expvar, !offset, level), ty=ty }
 			| NONE => Error ( ErrorRecordFieldUndefined (var, symbol), pos )
 		end
 			
@@ -301,7 +301,7 @@ struct
 			| ARRAY (ty, _) => ty
 			| _ => Error ( ErrorVariableIsNotArray var, pos ) 
 		in
-			if isInt tyexp then { exp=subscriptVar(expvar, expexp), ty=ty }
+			if isInt tyexp then { exp=subscriptVar(expvar, expexp, level), ty=ty }
 			else Error ( ErrorArrayIndexIsNotInt, pos )
 		end
 	

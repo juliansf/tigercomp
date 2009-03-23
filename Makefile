@@ -1,6 +1,6 @@
 # Unix makefile for tigermain
 
-HOME=/opt/local
+HOME=/usr/share
 MOSMLHOME=${HOME}/mosml
 MOSMLTOOLS=camlrunm $(MOSMLHOME)/tools
 MOSMLLEX=mosmllex
@@ -51,12 +51,12 @@ GRALOBJS= \
 	tigerescap.uo \
 	TigerTemp.uo \
 	TigerTree.uo \
+	TigerAssem.uo \
 	TigerFrame.uo \
 	TigerTranslate.uo \
 	TigerEnv.uo \
 	TigerSemant.uo \
 	TigerCanon.uo \
-	TigerAssem.uo \
 	TigerCodeGen.uo \
 	tigerpp.uo \
 	tigermain.uo
@@ -145,6 +145,8 @@ TigerTemp.uo:
 	$(MOSMLC) $(LOADPATH) $(SEMANTIC)/TigerTemp.sig $(SEMANTIC)/TigerTemp.sml
 TigerTree.uo:
 	$(MOSMLC) $(LOADPATH) $(SEMANTIC)/TigerTree.sml
+TigerAssem.uo:
+	$(MOSMLC) $(LOADPATH) $(CODEGEN)/TigerAssem.sig $(CODEGEN)/TigerAssem.sml
 TigerFrame.uo:
 	$(MOSMLC) $(LOADPATH) $(SEMANTIC)/TigerFrame.sig $(SEMANTIC)/TigerFrame.sml	
 TigerTranslate.uo:
@@ -155,8 +157,6 @@ TigerSemant.uo:
 	$(MOSMLC) $(LOADPATH) $(SEMANTIC)/TigerSemant.sig $(SEMANTIC)/TigerSemant.sml
 TigerCanon.uo:
 	$(MOSMLC) $(LOADPATH) $(CANON)/TigerCanon.sig $(CANON)/TigerCanon.sml
-TigerAssem.uo:
-	$(MOSMLC) $(LOADPATH) $(CODEGEN)/TigerAssem.sig $(CODEGEN)/TigerAssem.sml
 TigerCodeGen.uo:
 	$(MOSMLC) $(LOADPATH) $(CODEGEN)/TigerPPCGen.sig $(CODEGEN)/TigerPPCGen.sml \
 						  $(CODEGEN)/TigerCodeGen.sig $(CODEGEN)/TigerCodeGen.sml

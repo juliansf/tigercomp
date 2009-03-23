@@ -17,7 +17,16 @@ struct
 							
 	fun getResult() = !lfrag
 	fun addProc(body, frame) = lfrag := PROC {body=body, frame=frame} :: (!lfrag) 
-	fun addString(label, string) = lfrag := STRING (label, string) :: (!lfrag)
+	fun addString string = 
+		let 
+			fun p (PROC _) = false
+			 |	p (STRING (l,s)) = if s = string then true else false
+		in
+			case List.find p (!lfrag) of
+				SOME (STRING (l,s)) => l
+			|	SOME _ => Error (ErrorInternalError "problemas con TigerTranslate.addString!", 0)
+			| NONE => let val l = newlabel() in (lfrag := STRING (l, string) :: (!lfrag); l) end
+		end
 	
 	fun toplb lst = hd(!lst)
 	fun pushlb lst x = lst := x :: (!lst)
@@ -30,7 +39,7 @@ struct
 		TigerFrame.sl_access (#depth(caller) - #depth(callee))
 	
 	fun var_access (varlevel:level, access) (level:level) =
-		TigerFrame.var_access (access, #depth(level) - #depth(varlevel))
+		TigerFrame.var_access (access, #depth(level) - #depth(varlevel), #frame(varlevel))
 	
 	fun newLevel 
 	(parent:level, name, formals) =
@@ -40,7 +49,7 @@ struct
 		
 	fun getLevelLabel (level:level) = getFrameLabel(#frame(level))
 	
-	fun formals (level:level) = List.map (fn x => (level, x)) (TigerFrame.formals (#frame(level)))
+	fun formals (level:level) = List.map (fn x => (level, x)) (TigerFrame.getFormals (#frame(level)))
 	
 	fun allocLocal (level:level) escapes =
 		(level, TigerFrame.allocLocal (#frame(level)) escapes)
@@ -49,10 +58,6 @@ struct
 	  Ex of TigerTree.exp (* Expresion *)
 	| Nx of TigerTree.stm (* No Result *)
 	| Cx of TigerTemp.label * TigerTemp.label -> TigerTree.stm (* Condicion *)
-
-	fun seq [] = Error ( ErrorInternalError "problemas con Translate.seq!", 0)
-		| seq [a] = a
-		| seq (a::b::xs) = SEQ(a,seq (b::xs))
 	
 	(* Funciones desempaquetadoras de expresiones *)
 	fun unEx (Ex e) = e
@@ -89,17 +94,12 @@ struct
 	fun nilExp () = Ex (CONST 0) (* puntero a null *)
 	fun intExp n = Ex (CONST n)
 	
-	fun stringExp s = 
-		let
-			val l = newlabel()
-		in
-			addString(l,s);
-			Ex (NAME l)
-		end
+	fun stringExp s = Ex (NAME (addString s))
 		
 	fun callExp (name, params, caller, callee, proc:bool) =
 		let 
 			val params' = sl_access caller callee :: List.map unEx params
+			val _ = TigerFrame.setMaxCallArgs (#frame(caller)) (List.length params')
 		in
 			if not proc then
 				let
@@ -128,10 +128,11 @@ struct
 			| Leq => Cx (fn (lv,lf) => CJUMP (LE, exp1, exp2, lv, lf))
 		end
 	
-	fun recordExp inits =
+	fun recordExp (inits, level:level) =
 		let 
 			val inits' = List.map unEx inits
 			val temp = newtemp()
+			val _ = TigerFrame.setMaxCallArgs (#frame(level)) (List.length inits' + 1)
 		in
 			Ex (ESEQ (
 						SEQ (EXP (externalCall ("_createRecord", (CONST (List.length inits)::inits'))),
@@ -212,9 +213,10 @@ struct
 			Nx(JUMP (NAME label, [label]))
 		end
 		
-	fun arrayExp(size, init)=
+	fun arrayExp(size, init, level:level)=
 		let 
 			val temp = newtemp()
+			val _ = TigerFrame.setMaxCallArgs (#frame(level)) 2
 		in
 			Ex (ESEQ (
 						SEQ (EXP (externalCall ("_createArray", [unEx size, unEx init]) ),
@@ -225,11 +227,24 @@ struct
 	(* Traduccion de Variables *)
 	fun simpleVar (access, level) = Ex (var_access access level)
 	
-	fun fieldVar (varaddr, offset) =
-			Ex ( MEM (BINOP (PLUS, BINOP (MUL, CONST wordSize, CONST offset), unEx varaddr)))
+	fun fieldVar (varaddr, offset, level:level) =
+		let
+			val varaddr' = unEx varaddr
+			val _ = TigerFrame.setMaxCallArgs (#frame(level)) 1
+		in
+			Ex (ESEQ (EXP (externalCall ("_checkNil", [varaddr'])),
+								MEM (BINOP (PLUS, BINOP (MUL, CONST wordSize, CONST offset), varaddr'))))
+		end
 	
-	fun subscriptVar (varaddr, expOffset) =
-			Ex ( MEM (BINOP (PLUS, BINOP (MUL, CONST wordSize, unEx expOffset), unEx varaddr)))
+	fun subscriptVar (varaddr, expOffset, level:level) =
+		let
+			val expOffset' = unEx expOffset
+			val varaddr' = unEx varaddr
+			val _ = TigerFrame.setMaxCallArgs (#frame(level)) 2
+		in
+			Ex (ESEQ (EXP (externalCall ("_checkIndex", [expOffset', varaddr'])),
+								MEM (BINOP (PLUS, BINOP (MUL, CONST wordSize, expOffset'), varaddr'))))
+		end
 	
 	(* Traduccion de declaraciones *)
 	fun varDec (access, init) = 
@@ -246,8 +261,11 @@ struct
 									
 			val frame = #frame(level)
 			val funlabel = getFrameLabel(frame)
-			val procbody = seq[ LABEL funlabel, SEQ(LABEL (namedlabel "Prologo"), MOVE (MEM (TEMP SP), TEMP FP)), body', SEQ(LABEL (namedlabel "Epilogo"), MOVE (MEM (TEMP SP), TEMP FP))]
+			val procbody = 
+				seq[SEQ(LABEL (namedlabel "Prologo"), MOVE (MEM (TEMP SP), TEMP FP)), 
+						SEQ(LABEL (namedlabel "Body"), body'), 
+						SEQ(LABEL (namedlabel "Epilogo"), MOVE (TEMP SP, MEM(TEMP SP)))]
 		in
-			addProc(procEntryExit1 (procbody, frame), frame )
+			addProc(SEQ(LABEL funlabel, procEntryExit1 (procbody, frame)), frame )
 		end	
 end
