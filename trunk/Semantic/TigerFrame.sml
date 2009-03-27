@@ -132,7 +132,7 @@ struct
 									 
 	fun string label s = labelname(label) ^ ": .ascii \"" ^ s ^ "\"\n"
 	
-	fun sl_access ~1 = TEMP FP
+	fun sl_access ~1 = MEM (TEMP SP)
 		| sl_access 0 = MEM (BINOP (PLUS, CONST linkAreaSize, TEMP FP))
 		| sl_access n = MEM (BINOP (PLUS, CONST linkAreaSize, sl_access (n-1)))
 	

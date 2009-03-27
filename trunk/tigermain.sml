@@ -25,6 +25,7 @@ fun main(tigername, args) =
 		val code = ref false
 		val code_list = ref false
 		val flow = ref false
+		val flowgraph = ref false
 		val inter = ref false
 		val asm = ref false
 		val output = ref false
@@ -43,6 +44,8 @@ fun main(tigername, args) =
 			| "-codelist" => (code_list := true; false)
       | "-code-all" => (escapes := true; ir := true; canon := true; code := true; false)
 			| "-flow" => (flow := true; false)
+			| "-flow-all" => (escapes := true; ir := true; canon := true; code := true; flow := true; false)
+			| "-flowgraph" => (flowgraph := true; false)
 			| "-inter" => (inter := true; false)
 			| "-s" => (asm := true; false)
 			| "-o" => (output := true; true)
@@ -105,8 +108,46 @@ fun main(tigername, args) =
 								val lfrag2 = List.map codegen fragments
 							in
 								if !code_list then 
+									(print "\n::: CODE LIST :::\n";
 									List.app (fn (l,f) => 
-										List.app (print o (TigerAssem.format TigerTemp.tempname)) l) lfrag2 
+										List.app (print o (TigerAssem.format TigerTemp.tempname)) l) lfrag2) else ();
+								
+								if !flow then
+									let
+										fun i2g (l,f) =	
+											let 
+												val (fgraph, lnodes) = TigerMakeGraph.instrs2graph l
+											in
+												(fgraph, lnodes, l, f)
+											end
+										
+										fun flow2inter (fg, ln, li, f) =
+											let
+												val (igraph, fn2tmps) = TigerLiveness.interferenceGraph fg
+											in
+												(fg, igraph, ln, li, f)
+											end 
+										
+										val lfrag3 = List.map i2g lfrag2
+										val lfrag4 = List.map flow2inter lfrag3
+									in
+										if !flowgraph then 
+											 (print "\n\n======================\n FLOWGRAPHS \n======================\n\n";
+											  List.app (fn (TigerFlow.FGRAPH fg, ln, li, f) =>
+													TigerGraph.printGraph false (#control fg)) lfrag3;
+												
+												print "\n\n======================\n CORRESPONDENCE \n======================\n\n";
+												List.app (fn (TigerFlow.FGRAPH fg, ln, li, f) =>
+													List.app (fn (n,i) => 
+														(print (TigerGraph.nodename n ^ " -> "); 
+														 print (TigerAssem.format TigerTemp.tempname i))) (ListPair.zip (ln,li))) lfrag3;
+												
+												print "\n\n======================\n IGRAPHS \n======================\n\n";
+												List.app (fn (fg, ig, ln, li, f) =>
+													(print ("\n\n" ^ (TigerTemp.labelname (TigerFrame.getFrameLabel f)) ^ ":\n"); 
+													 TigerLiveness.show ig)) lfrag4)
+										else ()
+									end
 								else ()
 							end
 						else ()

@@ -1,5 +1,6 @@
 structure tigertab :> tigertab =
 struct
+
 open Polyhash
 
 type ('a, 'b) Tabla = ('a, 'b) hash_table
@@ -9,6 +10,10 @@ exception noExiste
 exception noExisteS of string
 
 fun tabNueva() = mkPolyTable(100, noExiste)
+
+(* Tablas con comparacion diferente al igual *)
+fun newTable comp = mkTable (hash, comp) (100, noExiste)
+
 fun fromTable t =
 	let	val t' = tabNueva()
 	in	apply (fn x => insert t' x) t; t' end
@@ -58,4 +63,7 @@ fun tabFiltra(f, t) =
 	end
 fun tabPrimer(f, t) = hd(List.filter (fn(a, b) => f b) (listItems t))
 fun tabClaves t = List.map (fn(x, y) => x) (listItems t)
+
+fun insert t (k, v) = Polyhash.insert t (k,v)
 end
+
