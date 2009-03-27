@@ -112,7 +112,7 @@ struct
 			 |	munchStm (T.EXP(T.CALL(T.NAME l, args))) = (
 			 			emit (A.OPER {assem="bl " ^ TigerTemp.labelname l ^ "\n",
 			 										dst=TigerFrame.calldefs,
-			 										src=munchArgs args,
+			 										src=munchArgs l args,
 			 										jump=NONE}))
 			 
 			 |	munchStm(T.EXP(e)) =
@@ -180,7 +180,7 @@ struct
 			 			result (fn r => (
 			 				emit(A.OPER {assem="bl " ^ TigerTemp.labelname l ^ "\n",
 			 										 dst=TigerFrame.calldefs,
-			 										 src= munchArgs args,
+			 										 src= munchArgs l args,
 			 										 jump=NONE})))
 			 
 			 |	munchExp (T.BINOP(T.PLUS, T.CONST 0, e)) = 
@@ -441,9 +441,10 @@ struct
 					return []
 			*)
 			
-			and munchArgs args =
+			and munchArgs l args =
 				let 
 					val i = ref 0
+					(*val formals = TigerFrame.getFormals (valOf(tigertab.tabSearch ))*)
 					
 					fun ma [] regs = []
 					 |	ma (a::args') [] = (* guardar a en la memoria *)

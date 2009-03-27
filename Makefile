@@ -10,6 +10,7 @@ GCC=gcc
 CFLAGS= -g
 MOSMLC=mosmlc -c -liberal
 MOSMLL=mosmlc
+TOPLEVEL= -toplevel
 
 # Unix
 REMOVE=rm -f
@@ -30,10 +31,11 @@ PARSER=Parser
 SEMANTIC=Semantic
 CANON=Canonizer
 CODEGEN=CodeGen
+LIVE=Liveness
 MISC=Misc
 BIN=bin
 
-LOADPATH=-I $(LEXER) -I $(PARSER) -I $(MISC) -I $(SEMANTIC) -I $(CANON) -I $(CODEGEN) 
+LOADPATH=-I $(LEXER) -I $(PARSER) -I $(MISC) -I $(SEMANTIC) -I $(CANON) -I $(CODEGEN) -I $(LIVE)
 
 .SUFFIXES :
 .SUFFIXES : .sig .sml .ui .uo
@@ -44,12 +46,13 @@ GRALOBJS= \
 	TigerAbs.uo \
 	TigerTypes.uo \
 	TigerError.uo \
+	tigertab.uo \
 	TigerUtils.uo \
 	Parser.uo \
 	Scanner.uo \
-	tigertab.uo \
 	tigerescap.uo \
 	TigerTemp.uo \
+	TigerGraph.uo \
 	TigerTree.uo \
 	TigerAssem.uo \
 	TigerFrame.uo \
@@ -58,6 +61,9 @@ GRALOBJS= \
 	TigerSemant.uo \
 	TigerCanon.uo \
 	TigerCodeGen.uo \
+	TigerFlow.uo \
+	TigerMakeGraph.uo \
+	TigerLiveness.uo \
 	tigerpp.uo \
 	tigermain.uo
 
@@ -79,6 +85,11 @@ TigerLineNumber.sml: $(MISC)/TigerLineNumber.sml
 
 tigerpp.sml: $(MISC)/tigerpp.sml
 
+test: 
+	$(MOSMLC) $(LOADPATH) test.sml
+	if ! test -d $(BIN); then mkdir $(BIN); fi; \
+	$(MOSMLL) $(LOADPATH) -o $(BIN)/test$(EXEFILE) test.uo
+	
 clean:
 	$(REMOVE) Makefile.bak
 	
@@ -107,6 +118,10 @@ clean:
 	$(REMOVE) *.uo
 	
 	$(CD) $(CODEGEN);\
+	$(REMOVE) *.ui;\
+	$(REMOVE) *.uo
+	
+	$(CD) $(LIVE);\
 	$(REMOVE) *.ui;\
 	$(REMOVE) *.uo
 	
@@ -143,6 +158,8 @@ tigerescap.uo:
 	$(MOSMLC) $(LOADPATH) $(MISC)/tigerescap.sig $(MISC)/tigerescap.sml
 TigerTemp.uo:
 	$(MOSMLC) $(LOADPATH) $(SEMANTIC)/TigerTemp.sig $(SEMANTIC)/TigerTemp.sml
+TigerGraph.uo:
+	$(MOSMLC) $(LOADPATH) $(MISC)/TigerGraph.sig $(MISC)/TigerGraph.sml
 TigerTree.uo:
 	$(MOSMLC) $(LOADPATH) $(SEMANTIC)/TigerTree.sml
 TigerAssem.uo:
@@ -160,6 +177,13 @@ TigerCanon.uo:
 TigerCodeGen.uo:
 	$(MOSMLC) $(LOADPATH) $(CODEGEN)/TigerPPCGen.sig $(CODEGEN)/TigerPPCGen.sml \
 						  $(CODEGEN)/TigerCodeGen.sig $(CODEGEN)/TigerCodeGen.sml
+TigerFlow.uo:
+	$(MOSMLC) $(LOADPATH) $(LIVE)/TigerFlow.sml
+TigerMakeGraph.uo:
+	$(MOSMLC) $(LOADPATH) $(LIVE)/TigerMakeGraph.sig $(LIVE)/TigerMakeGraph.sml
+TigerLiveness.uo:
+	$(MOSMLC) $(LOADPATH) $(LIVE)/TigerLiveness.sig $(LIVE)/TigerLiveness.sml
+
 tigerpp.uo:
 	$(MOSMLC) $(LOADPATH) $(MISC)/tigerpp.sml
 	

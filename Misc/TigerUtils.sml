@@ -70,4 +70,16 @@ struct
 		                                 x::path, (visited,cys))))
 		  val (xs,_) = ListPair.unzip graph
 	  in sort(xs, [], ([],[])) end;
+	 
+	 structure Lst =
+	 	struct
+	 		fun cleandup l =
+				let	
+					val t = tigertab.tabNueva()
+					val _ = List.app (fn x => (tigertab.tabInsert t (x,());())) l
+				in List.map (fn (x,y) => x) (tigertab.tabAList t) end;
+			
+			fun diff l l' = 
+				List.filter (fn x => not (List.exists (fn y => x = y) l')) l
+	 	end
 end
