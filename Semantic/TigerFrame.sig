@@ -26,7 +26,7 @@ sig
 	val linkAreaSize : int
 	val LRSaveOffset : int
 	val externalCall : string * TigerTree.exp list -> TigerTree.exp
-	val newFrame : (TigerTemp.label * bool list) -> frame
+	val newFrame : TigerTemp.label * bool list -> frame
 	val getFormals : frame -> access list
 	val getFrameLabel : frame -> TigerTemp.label
 	val isLeaf : frame -> bool
