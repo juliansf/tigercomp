@@ -17,7 +17,7 @@ struct
 	datatype frag = PROC of { body : TigerTree.stm, frame : frame }
 							| STRING of TigerTemp.label * string
 							
-	val framesTable = tabNueva ()
+	val framesTable : (label, frame ref) Tabla = tabNueva ()
 		
 	(* Usamos este temp como un placeholder para reemplazarlo por 
 		 el offset correspondiente en TigerAssem.format *)
@@ -145,8 +145,8 @@ struct
 
 	fun procEntryExit1 (body, {localOffset, formals, label, leaf, maxArgs}) = 
 		let
-			fun copyArg (InReg r) = MOVE (TEMP (newtemp()), TEMP r)
-			 |	copyArg (InFrame off) = MOVE (TEMP (newtemp()), MEM(BINOP(PLUS, CONST off, TEMP SP)))
+			fun copyArg (InReg r, _) = MOVE (TEMP (newtemp()), TEMP r)
+			 |	copyArg (InFrame off, ar) = MOVE (MEM(BINOP(PLUS, CONST off, TEMP SP)), TEMP ar)
 			
 			fun saveReg r = 
 				let 
@@ -161,7 +161,7 @@ struct
 					let val t = newtemp()
 					in TigerTree.seq ([MOVE (TEMP t, TEMP LR) ] @ proc @ [MOVE (TEMP LR, TEMP t)]) end
 				
-			val argsMoves = List.map copyArg formals
+			val argsMoves = List.map copyArg (ListPair.zip (formals, argregs))
 			val (entry, exit) = ListPair.unzip (List.map saveReg calleesaves)
 		in 
 			saveLR (entry @ argsMoves @ [body] @ exit) 
