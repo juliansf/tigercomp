@@ -1,6 +1,6 @@
 signature TigerFrame =
 sig
-	type register
+	type register = TigerTemp.temp
 	type frame
 	type access
 	
@@ -14,12 +14,13 @@ sig
 	val RV : TigerTemp.temp
 	val LR : TigerTemp.temp
 	
-	val specialregs : TigerTemp.temp list
-	val argregs : TigerTemp.temp list
-	val calleesaves : TigerTemp.temp list
-	val callersaves : TigerTemp.temp list
-	val calldefs : TigerTemp.temp list
-	val registers : TigerTemp.temp list
+	val specialregs : register list
+	val argregs : register list
+	val calleesaves : register list
+	val callersaves : register list
+	val calldefs : register list
+	val registers : register list
+	
 
 	val wordSize : int
 	val prologSize : int

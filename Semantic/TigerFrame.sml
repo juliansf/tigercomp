@@ -6,7 +6,7 @@ struct
 	
 	structure A = TigerAssem
 	
-	type register = string
+	type register = temp
 	datatype access = InFrame of int | InReg of TigerTemp.temp
 	type frame = {localOffset: int ref, 
 								formals: access list, 
@@ -68,12 +68,12 @@ struct
 	
 	val specialregs = [SP, R2, R13, CR]
 	val argregs = [RV, R4, R5, R6, R7, R8, R9, R10]
-	val calleesaves = [R14, R15, R16, R17, R18, R19, R20, R21, R22, 
-									 R23, R24, R25, R26, R27, R28, R29, R30, R31]
+	val calleesaves = [R31, R30, R29, R28, R27, R26, R25, R24, R23, 
+									 R22, R21, R20, R19, R18, R17, R16, R14, R14]
 	val callersaves = [ZERO, R11, R12]
 	
 	val calldefs = callersaves @ argregs
-	val registers = [ZERO]
+	val registers = specialregs @ calldefs @ calleesaves
 	
 	val wordSize = 4
 	val prologSize = wordSize * 1

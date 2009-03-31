@@ -99,13 +99,18 @@ struct
 					 				val lmv = proc_nodes (defl', usel', ismovel')
 					 			in
 					 				List.app (fn d => List.app (mkEdge d) ltemps) dl;
-					 				if ismv then (tnode (List.hd dl), tnode (List.hd ul)) :: lmv
+					 				if ismv then 
+					 					let 
+					 						val a = tnode (List.hd dl)
+					 						val b = tnode (List.hd ul)	
+					 					in (a,b) :: lmv end
 					 				else lmv
 					 			end
 					  | proc_nodes _ = 
 					  		Error (ErrorInternalError "problemas con TigerLiveness.interferenceGraph.makeIGraph!", 0)
 				in
-					proc_nodes(tabAList use, tabAList def, tabAList ismove)
+					List.app (fn n => (tnode n;())) TigerFrame.registers;
+					proc_nodes(tabAList def, tabAList use, tabAList ismove)
 				end
 			
 			val mvl = makeIGraph ();
@@ -124,6 +129,10 @@ struct
   					print (TigerTemp.tempname (gtemp n) ^ " -> "); 
   					print_adj (TigerGraph.adj n); print " *\n")
   	in
-  		List.app print_node (TigerGraph.nodes graph)
+  		print ":::: iGraph :::::::::::::::::::\n";
+  		List.app print_node (TigerGraph.nodes graph);
+  		
+  		print "\n:::: Moves ::::::::::::::::::::\n";
+  		List.app (fn (x,y) => print (TigerTemp.tempname (gtemp x) ^ " <- " ^ TigerTemp.tempname (gtemp y) ^ "\n")) moves
   	end
 end

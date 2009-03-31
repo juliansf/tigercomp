@@ -32,10 +32,11 @@ SEMANTIC=Semantic
 CANON=Canonizer
 CODEGEN=CodeGen
 LIVE=Liveness
+COLOR=Color
 MISC=Misc
 BIN=bin
 
-LOADPATH=-I $(LEXER) -I $(PARSER) -I $(MISC) -I $(SEMANTIC) -I $(CANON) -I $(CODEGEN) -I $(LIVE)
+LOADPATH=-I $(LEXER) -I $(PARSER) -I $(MISC) -I $(SEMANTIC) -I $(CANON) -I $(CODEGEN) -I $(LIVE) -I $(COLOR)
 
 .SUFFIXES :
 .SUFFIXES : .sig .sml .ui .uo
@@ -46,6 +47,8 @@ GRALOBJS= \
 	TigerAbs.uo \
 	TigerTypes.uo \
 	TigerError.uo \
+	TigerSet.uo \
+	TigerStack.uo \
 	tigertab.uo \
 	TigerUtils.uo \
 	Parser.uo \
@@ -64,6 +67,8 @@ GRALOBJS= \
 	TigerFlow.uo \
 	TigerMakeGraph.uo \
 	TigerLiveness.uo \
+	TigerColor.uo \
+	TigerRegAlloc.uo \
 	tigerpp.uo \
 	tigermain.uo
 
@@ -125,6 +130,10 @@ clean:
 	$(REMOVE) *.ui;\
 	$(REMOVE) *.uo
 	
+	$(CD) $(COLOR);\
+	$(REMOVE) *.ui;\
+	$(REMOVE) *.uo
+	
 	$(REMOVE) tigermain
 	$(REMOVE) *.ui
 	$(REMOVE) *.uo
@@ -146,6 +155,10 @@ TigerError.uo:
 	$(MOSMLC) $(LOADPATH) $(MISC)/TigerError.sml
 TigerUtils.uo:
 	$(MOSMLC) $(LOADPATH) $(MISC)/TigerUtils.sml	
+TigerSet.uo: 
+	$(MOSMLC) $(LOADPATH) $(MISC)/TigerSet.sig $(MISC)/TigerSet.sml
+TigerStack.uo: 
+	$(MOSMLC) $(LOADPATH) $(MISC)/TigerStack.sig $(MISC)/TigerStack.sml
 Parser.uo: 
 	$(MOSMLC) $(LOADPATH) $(PARSER)/Parser.sig $(PARSER)/Parser.sml
 Scanner.uo: 
@@ -183,6 +196,10 @@ TigerMakeGraph.uo:
 	$(MOSMLC) $(LOADPATH) $(LIVE)/TigerMakeGraph.sig $(LIVE)/TigerMakeGraph.sml
 TigerLiveness.uo:
 	$(MOSMLC) $(LOADPATH) $(LIVE)/TigerLiveness.sig $(LIVE)/TigerLiveness.sml
+TigerColor.uo: 
+	$(MOSMLC) $(LOADPATH) $(COLOR)/TigerColor.sig $(COLOR)/TigerColor.sml
+TigerRegAlloc.uo: 
+	$(MOSMLC) $(LOADPATH) $(COLOR)/TigerRegAlloc.sig $(COLOR)/TigerRegAlloc.sml
 
 tigerpp.uo:
 	$(MOSMLC) $(LOADPATH) $(MISC)/tigerpp.sml

@@ -71,6 +71,8 @@ struct
 		  val (xs,_) = ListPair.unzip graph
 	  in sort(xs, [], ([],[])) end;
 	 
+	 fun some v = case v of SOME _ => true | NONE => false
+	 
 	 structure Lst =
 	 	struct
 	 		fun cleandup l =
@@ -82,4 +84,5 @@ struct
 			fun diff l l' = 
 				List.filter (fn x => not (List.exists (fn y => x = y) l')) l
 	 	end
+	 	
 end
