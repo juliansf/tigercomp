@@ -4,6 +4,7 @@ open TigerTemp
 
 fun main() =
 let
+(*
 	val a = namedtemp("a")
 	val b = namedtemp("b")
 	val c = namedtemp("c")
@@ -20,11 +21,36 @@ let
 		(* n6 *) LABEL {assem="l2: ", lab=l2},
 		(* n7 *) OPER {assem="return c", src=[c], dst=[], jump=SOME []}
 	]
+*)
+	val b = namedtemp("b")
+	val c = namedtemp("c")
+	val d = namedtemp("d")
+	val e = namedtemp("e")
+	val f = namedtemp("f")
+	val g = namedtemp("g")
+	val h = namedtemp("h")
+	val i = namedtemp("i")
+	val j = namedtemp("j")
+	val k = namedtemp("k")
+	val m = namedtemp("m")
 	
-	val (fgraph, lnodes) = TigerMakeGraph.instrs2graph li
-	val (igraph, fn2tmps) = TigerLiveness.interferenceGraph fgraph
+	val li = [
+		OPER {assem="g := mem[j+12]", dst=[g], src=[j], jump=NONE},
+		OPER {assem="h := k - 1", dst=[h], src=[k], jump=NONE},
+		OPER {assem="f := g * h", dst=[f], src=[g,h], jump=NONE},
+		OPER {assem="e := mem[j+8]", dst=[e], src=[j], jump=NONE},
+		OPER {assem="m := mem[j+16]", dst=[m], src=[j], jump=NONE},
+		OPER {assem="b := mem[f]", dst=[b], src=[f], jump=NONE},
+		OPER {assem="c := e + 8", dst=[c], src=[e], jump=NONE},
+		MOVE {assem="d := c", dst=d, src=c},
+		OPER {assem="k := m + 4", dst=[k], src=[m], jump=NONE},
+		MOVE {assem="j := b", dst=j, src=b},
+		OPER {assem="", dst=[], src=[d,k,j], jump=SOME []}
+	]
+	
+	val (li, alloc) = TigerRegAlloc.alloc (li, TigerFrame.newFrame(TigerTemp.namedlabel "_main", []))
 in
-	TigerLiveness.show igraph
+	()
 end
 
 val _ = main()

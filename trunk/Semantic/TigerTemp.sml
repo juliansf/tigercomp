@@ -22,5 +22,7 @@ struct
 		fun namedlabel2 s = s ^ "_" ^ newlabel()
 		fun labelname s = s
 		fun tempname t = t
+		
+		val comptemps = String.compare
 	end
 end
