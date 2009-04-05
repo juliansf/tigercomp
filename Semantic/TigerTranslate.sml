@@ -36,7 +36,7 @@ struct
 	fun posWhileFor (level:level) = poplb (#lstack(level))
 	
 	fun sl_access (caller:level) (callee:level) =
-		TigerFrame.sl_access (#depth(caller) - #depth(callee))
+		TigerFrame.sl_access ((#depth caller) - (#depth callee))
 	
 	fun var_access (varlevel:level, access) (level:level) =
 		TigerFrame.var_access (access, #depth(level) - #depth(varlevel), #frame(varlevel))
@@ -96,10 +96,14 @@ struct
 	
 	fun stringExp s = Ex (NAME (addString s))
 		
-	fun callExp (name, params, caller, callee, proc:bool) =
+	fun callExp (name, params, caller, callee, proc:bool, ext:bool) =
 		let 
-			val params' = sl_access caller callee :: List.map unEx params
-			val _ = TigerFrame.setMaxCallArgs (#frame(caller)) (List.length params')
+			val params' = if ext then 
+											List.map unEx params 
+										else 
+											sl_access caller callee :: List.map unEx params
+					
+			val _ = TigerFrame.setMaxCallArgs (#frame(caller)) false (List.length params')
 		in
 			if not proc then
 				let
@@ -128,14 +132,29 @@ struct
 			| Leq => Cx (fn (lv,lf) => CJUMP (LE, exp1, exp2, lv, lf))
 		end
 	
+	fun opExpString (oper, exp1, exp2, level:level) =
+		let
+			val exp1 = unEx exp1 and exp2 = unEx exp2
+			val temp = newtemp ()
+			val oper = case oper of
+				Eq => 0 | Neq => 1 | Gt => 2 | Geq => 3 | Lt => 4 | Leq => 5
+			| _ => Error (ErrorInternalError "problemas con Translate.opExpString!", 0)
+			val _ = TigerFrame.setMaxCallArgs (#frame level) false 3
+		in
+			Ex (ESEQ (
+						SEQ (EXP(externalCall("_stringComp", [CONST oper, exp1, exp2])),
+								MOVE (TEMP temp, TEMP RV)),
+						TEMP temp))
+		end
+	
 	fun recordExp (inits, level:level) =
 		let 
 			val inits' = List.map unEx inits
 			val temp = newtemp()
-			val _ = TigerFrame.setMaxCallArgs (#frame(level)) (List.length inits' + 1)
+			val _ = TigerFrame.setMaxCallArgs (#frame level) true (List.length inits' + 1)
 		in
 			Ex (ESEQ (
-						SEQ (EXP (externalCall ("_createRecord", (CONST (List.length inits)::inits'))),
+						SEQ (EXP (externalCall ("_createRecord", CONST (List.length inits)::inits')),
 								MOVE (TEMP temp, TEMP RV)), 
 						TEMP temp))
 		end
@@ -216,7 +235,7 @@ struct
 	fun arrayExp(size, init, level:level)=
 		let 
 			val temp = newtemp()
-			val _ = TigerFrame.setMaxCallArgs (#frame(level)) 2
+			val _ = TigerFrame.setMaxCallArgs (#frame(level)) false 2
 		in
 			Ex (ESEQ (
 						SEQ (EXP (externalCall ("_createArray", [unEx size, unEx init]) ),
@@ -230,7 +249,7 @@ struct
 	fun fieldVar (varaddr, offset, level:level) =
 		let
 			val varaddr' = unEx varaddr
-			val _ = TigerFrame.setMaxCallArgs (#frame(level)) 1
+			val _ = TigerFrame.setMaxCallArgs (#frame(level)) false 1
 		in
 			Ex (ESEQ (EXP (externalCall ("_checkNil", [varaddr'])),
 								MEM (BINOP (PLUS, BINOP (MUL, CONST wordSize, CONST offset), varaddr'))))
@@ -240,9 +259,9 @@ struct
 		let
 			val expOffset' = unEx expOffset
 			val varaddr' = unEx varaddr
-			val _ = TigerFrame.setMaxCallArgs (#frame(level)) 2
+			val _ = TigerFrame.setMaxCallArgs (#frame(level)) false 2
 		in
-			Ex (ESEQ (EXP (externalCall ("_checkIndex", [expOffset', varaddr'])),
+			Ex (ESEQ (EXP (externalCall ("_checkIndex", [varaddr', expOffset'])),
 								MEM (BINOP (PLUS, BINOP (MUL, CONST wordSize, expOffset'), varaddr'))))
 		end
 	
@@ -261,11 +280,7 @@ struct
 									
 			val frame = #frame(level)
 			val funlabel = getFrameLabel(frame)
-			val procbody = 
-				seq[SEQ(LABEL (namedlabel "Prologo"), MOVE (MEM (TEMP SP), TEMP FP)), 
-						SEQ(LABEL (namedlabel "Body"), body'), 
-						SEQ(LABEL (namedlabel "Epilogo"), MOVE (TEMP SP, MEM(TEMP SP)))]
 		in
-			addProc(SEQ(LABEL funlabel, procEntryExit1 (procbody, frame)), frame )
+			addProc(SEQ(LABEL funlabel, procEntryExit1 (body', frame)), frame )
 		end	
 end

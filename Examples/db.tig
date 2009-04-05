@@ -1,0 +1,101 @@
+let
+	type Buddy = {name:string, adj:string}
+	type People = {b:Buddy, next:People}
+	
+	var db : People := nil
+	
+	function print_db(db:People) =
+		while (db <> nil) do (
+			if (db.b <> nil) then
+				(print(db.b.name); print (" es "); print(db.b.adj); print(".\n"))
+			else
+				(print ("Error en la base de datos!\n"); exit(-1));
+			db := db.next
+		)
+	
+	function add_buddy(db:People, name:string, adj:string) : People = 
+	(
+		People{b=Buddy{name=name, adj=adj}, next=db}
+	)
+	
+	function readline() : string = 
+		let 
+			var c := getchar()
+			var str := ""
+		in
+			while c <> "\n" do (
+				str := concat(str, c);
+				c := getchar()
+			);
+			str
+		end
+	
+	function menu() : int = 
+	(
+		print("### MENU PRINCIPAL ###\n");
+		print("1 - Agregar una persona a lista.\n");
+		print("2 - Mostrar la lista completa.\n");
+		print("3 - Filtrar por adjetivo.\n");
+		print("4 - Salir.\n");
+		print("Elija una opcion: ");
+		
+		ord(readline()) - ord("0")
+	)
+	
+	var op := 0
+	var name := ""
+	var adj := ""
+in
+/*
+	db := People{b=Buddy{name="Julian", adj="enano"}, next=nil};
+	db := People{b=Buddy{name="Osvaldo", adj="gordo"}, next=db};
+	db := People{b=Buddy{name="Analia", adj="narigona"}, next=db};
+	db := People{b=Buddy{name="Mauricio", adj="gordo"}, next=db};
+	print_db(db);
+*/	
+	while 1 do (
+		op := menu();
+		
+		if op = 1 then (
+			print("Nombre: ");
+			name:= readline();
+			print("Adjetivo: ");
+			adj := readline();
+			db := add_buddy(db, name, adj)
+		)
+		else if op = 2 then (
+			if nil = db then
+				print("\nLa lista se encuentra vacia!\n\n")
+			else (
+				print("\n# Contenido de la lista:\n"); 
+				print_db(db);
+				print("\n")
+			)
+		)
+		else if op = 3 then (
+			let 
+				var db_tmp := db
+				var adj := (print("\nAdjetivo: "); readline())
+				var found := 0
+			in
+				print("Personas que tienen \""); print (adj); print("\" como adjetivo:\n");
+				while db_tmp <> nil do (
+					if db_tmp.b.adj = adj then (
+						print(db_tmp.b.name); print("\n");
+						found := 1
+					);
+					db_tmp := db_tmp.next
+				);
+				if not(found) then print("Ninguna coincidencia!\n\n")
+				else print("\n")
+			end
+		)
+		else if op = 4 then (
+			print("Gracias y hasta luego!\n"); 
+			exit(0)
+		)
+		else
+			print("Opcion no valida!\n\n")
+	)
+	
+end

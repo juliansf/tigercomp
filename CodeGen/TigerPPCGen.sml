@@ -3,11 +3,10 @@ struct
 	open TigerAssem
 	open TigerFrame
 	open TigerError
+	open TigerUtils
 	
 	structure T = TigerTree
 	structure A = TigerAssem
-	
-	fun int i = if (i < 0) then "-"^makestring(~i) else makestring(i)
 	
 	fun relOp relop =
 		case relop of
@@ -26,14 +25,15 @@ struct
 			
 			fun munchStm (T.SEQ (a,b)) = (munchStm a; munchStm b)
 			
-			 |	munchStm (T.MOVE(T.TEMP t, T.MEM (T.VARACCESS (off, lab, e)))) = 
+			 |	munchStm (T.MOVE(T.TEMP t, T.MEM (T.VARACCESS (vk, off, lab, e)))) = 
 			 			emit (A.OPER {
-			 				assem="lwz `d0, " ^ int ( TigerFrame.varAreaOffset lab + off) ^ "(`s0)\n", 
+			 				assem="lwz `d0, " ^ TigerFrame.varOffsetStr lab vk off ^ "(`s0)\n", 
 			 				dst=[t], src=[munchExp e], jump=NONE})
 			 
-			 |	munchStm (T.MOVE(T.TEMP t, T.VARACCESS (off, lab, e))) = 
+			 		
+			 |	munchStm (T.MOVE(T.TEMP t, T.VARACCESS (vk, off, lab, e))) = 
 			 			emit (A.OPER {
-			 				assem="addi `d0, `s0, " ^ int ( TigerFrame.varAreaOffset lab + off) ^ "\n", 
+			 				assem="addi `d0, `s0, " ^ TigerFrame.varOffsetStr lab vk off ^ "\n", 
 			 				dst=[t], src=[munchExp e], jump=NONE})
 			
 			 |	munchStm (T.MOVE(T.TEMP t, T.MEM(T.BINOP(T.PLUS, T.CONST j, e)))) = 
@@ -54,13 +54,13 @@ struct
 				
 			 |	munchStm (T.MOVE(T.TEMP t1, T.TEMP t2)) =
 			 			if LR = t1 then (
-			 				emit (A.OPER {assem="lwz `d0, " ^ int TigerFrame.LRSaveOffset ^ "(`s0)\n",
-			 											dst=[t2], src=[SP], jump=NONE});
+			 				emit (A.OPER {assem="lwz `d0, " ^ int TigerFrame.LRSaveOffset ^ "(r1)\n",
+			 											dst=[t2], src=[], jump=NONE});
 			 				emit (A.OPER {assem="mtlr `s0\n", dst=[], src=[t2], jump=NONE}))
 			 			else if LR = t2 then (
-			 				emit (A.OPER {assem="mflr `d0\n", dst=[t1], src=[t1], jump=NONE});
-			 				emit (A.OPER {assem="stw `s0, " ^ int TigerFrame.LRSaveOffset ^ "(`d0)\n", 
-			 											dst=[SP], src=[t1], jump=NONE})
+			 				emit (A.OPER {assem="mflr `d0\n", dst=[t1], src=[], jump=NONE});
+			 				emit (A.OPER {assem="stw `s0, " ^ int TigerFrame.LRSaveOffset ^ "(r1)\n", 
+			 											dst=[], src=[t1], jump=NONE})
 			 			)
 			 			else (
 			 				emit (A.MOVE {assem="mr `d0, `s0\n", dst=t1, src=t2}))
@@ -69,19 +69,19 @@ struct
 			 			emit (A.MOVE {assem="mr `d0, `s0\n",
 			 										dst=t, src=munchExp e})
 			 
-			 |	munchStm (T.MOVE(T.MEM (T.VARACCESS (off, lab, e)), e')) = 
+			 |	munchStm (T.MOVE(T.MEM (T.VARACCESS (vk, off, lab, e)), e')) = 
 			 			emit (A.OPER {
-			 				assem="stw `s0, " ^ int ( TigerFrame.varAreaOffset lab + off) ^ "(`d0)\n", 
-			 				dst=[munchExp e], src=[munchExp e'], jump=NONE})
+			 				assem="stw `s1, " ^ TigerFrame.varOffsetStr lab vk off ^ "(`s0)\n", 
+			 				dst=[], src=[munchExp e, munchExp e'], jump=NONE})
 				 			
 			 										
 			 |	munchStm (T.MOVE(T.MEM(T.BINOP(T.PLUS, T.CONST i, e1)), e2)) =
-			 			emit (A.OPER {assem="stw `s0, " ^ int i ^ "(`d0)\n",
-			 										dst=[munchExp e1], src=[munchExp e2], jump=NONE})
+			 			emit (A.OPER {assem="stw `s1, " ^ int i ^ "(`s0)\n",
+			 										dst=[], src=[munchExp e1, munchExp e2], jump=NONE})
 			 										
 			 |	munchStm (T.MOVE(T.MEM(T.BINOP(T.PLUS, e1, T.CONST i)), e2)) = 
-			 			emit (A.OPER {assem="stw `s0, " ^ int i ^ "(`d0)\n",
-			 										dst=[munchExp e1], src=[munchExp e2], jump=NONE})
+			 			emit (A.OPER {assem="stw `s1, " ^ int i ^ "(`s0)\n",
+			 										dst=[], src=[munchExp e1, munchExp e2], jump=NONE})
 			 									
 			 |	munchStm (T.MOVE(T.MEM(T.CONST i), e)) =
 			 			emit (A.OPER {assem="stw `s0, " ^ int i ^ "(r0)\n",
@@ -90,23 +90,23 @@ struct
 			 |	munchStm ( T.MOVE (T.MEM (T.TEMP t1), T.TEMP t2)) = 
 			 			if SP = t1 andalso FP = t2 
 			 			then
-			 				emit (A.OPER {assem="stwu `s0, " 
-			 												^ TigerTemp.labelname (getFrameLabel frame) ^ "_framesize(`d0)\n",
-			 											dst=[SP], src=[SP], jump=NONE})
+			 				emit (A.OPER {assem="stwu r1, -" 
+			 												^ TigerTemp.labelname (getFrameLabel frame) ^ "_framesize(r1)\n",
+			 											dst=[], src=[], jump=NONE})
 			 			else
-			 				emit (A.OPER {assem="stw `s0, 0 (`d0)\n",
-			 											dst=[t1], src=[t2], jump=NONE})
+			 				emit (A.OPER {assem="stw `s1, 0(`s0)\n",
+			 											dst=[], src=[t1, t2], jump=NONE})
 			 
 			 |	munchStm (T.MOVE(T.MEM e1, e2)) = 
-			 			emit (A.OPER {assem="stw `s0, 0(`d0)\n",
-			 										dst=[munchExp e1], src=[munchExp e2], jump=NONE})
+			 			emit (A.OPER {assem="stw `s1, 0(`s0)\n",
+			 										dst=[], src=[munchExp e1, munchExp e2], jump=NONE})
 			 										
 			 |	munchStm (T.JUMP(T.NAME l, labels)) =
-			 			emit (A.OPER {assem="ba " ^ TigerTemp.labelname l ^ "\n",
+			 			emit (A.OPER {assem="b " ^ TigerTemp.labelname l ^ "\n",
 			 										dst=[], src=[], jump=SOME labels})
 			 			
 			 |	munchStm (T.JUMP(e, labels)) =
-			 			emit (A.OPER {assem="ba `s0\n",
+			 			emit (A.OPER {assem="b `s0\n",
 			 										dst=[], src=[munchExp e], jump=SOME labels})
 			 										
 			 |	munchStm (T.EXP(T.CALL(T.NAME l, args))) = (
@@ -119,6 +119,16 @@ struct
 			 			emit (A.MOVE {assem="mr `d0, `s0\n",
 			 										dst=TigerTemp.newtemp(), src=munchExp e})
 			 
+			 |	munchStm (T.CJUMP(relop, e, T.CONST i, lv, lf)) = 
+			 			(
+			 				emit (A.OPER {assem="cmpwi cr0, `s0, " ^ int i ^ "\n",
+			 											dst=[], 
+			 											src=[munchExp e], 
+			 											jump=NONE});
+			 				emit (A.OPER {assem= "b" ^ relOp relop ^ " " ^ TigerTemp.labelname lv ^ "\n",
+			 											dst=[], src=[], jump=SOME [lv, lf]})
+			 			)
+			 			
 			 |	munchStm (T.CJUMP(relop, e1, e2, lv, lf)) = 
 			 			(
 			 				emit (A.OPER {assem="cmpw cr0, `s0, `s1\n",
@@ -137,14 +147,14 @@ struct
 			
 			and munchExp (T.CONST i) = 
 						result (fn r => 
-							emit(A.OPER {assem="addi `d0, " ^ int i ^ "\n",
+							emit(A.OPER {assem="li `d0, " ^ int i ^ "\n",
 													 dst=[r], src=[], jump=NONE}))
 			
 			 |	munchExp (T.NAME l) = 
 			 			result (fn r => (
-			 				emit(A.OPER {assem="lis `d0, " ^ TigerTemp.labelname l ^ "@ha\n", 
+			 				emit(A.OPER {assem="addis `d0, 0, hi16(" ^ TigerTemp.labelname l ^ ")\n", 
 			 										 dst=[r], src=[], jump=NONE});
-			 				emit(A.OPER {assem="addi `d0, `s0, " ^ TigerTemp.labelname l ^ "@l\n",
+			 				emit(A.OPER {assem="ori `d0, `s0, lo16(" ^ TigerTemp.labelname l ^ ")\n",
 			 										 dst=[r], src=[r], jump=NONE})))
 			 					
 			 			
@@ -165,10 +175,10 @@ struct
 			 				emit(A.OPER {assem="lwz `d0, " ^ int i ^ "(r0)\n",
 			 										 dst=[r], src=[], jump=NONE}))
 			 
-			 | 	munchExp (T.MEM (T.VARACCESS (off, lab, e))) =
+			 | 	munchExp (T.MEM (T.VARACCESS (vk, off, lab, e))) =
 						result (fn r =>
 							emit(A.OPER {
-			 					assem="lwz `d0, " ^ int ( TigerFrame.varAreaOffset lab + off) ^ "(`s0)\n", 
+			 					assem="lwz `d0, " ^ TigerFrame.varOffsetStr lab vk off ^ "(`s0)\n", 
 			 					dst=[r], src=[munchExp e], jump=NONE}))
 			 			
 			 |	munchExp (T.MEM e) = 
@@ -176,26 +186,18 @@ struct
 			 				emit(A.OPER {assem="lwz `d0, 0(`s0)\n",
 			 										 dst=[r], src=[munchExp e], jump=NONE}))
 			 
+			 (*
 			 |	munchExp (T.CALL(T.NAME l, args)) = 
 			 			result (fn r => (
 			 				emit(A.OPER {assem="bl " ^ TigerTemp.labelname l ^ "\n",
 			 										 dst=TigerFrame.calldefs,
 			 										 src= munchArgs args,
 			 										 jump=NONE})))
+			 *)
 			 
-			 |	munchExp (T.BINOP(T.PLUS, T.CONST 0, e)) = 
-			 			result (fn r => 
-			 				emit (A.OPER {assem="addze `d0, `s0\n", 
-			 											dst=[r], 
-			 											src=[munchExp e], 
-			 											jump=NONE}))
+			 |	munchExp (T.BINOP(T.PLUS, T.CONST 0, e)) = munchExp e
 			 			
-			 |	munchExp (T.BINOP(T.PLUS, e, T.CONST 0)) = 
-			 			result (fn r => 
-			 				emit (A.OPER {assem="addze `d0, `s0\n", 
-			 											dst=[r], 
-			 											src=[munchExp e], 
-			 											jump=NONE}))
+			 |	munchExp (T.BINOP(T.PLUS, e, T.CONST 0)) = munchExp e
 			 			
 			 |	munchExp (T.BINOP(T.PLUS, T.CONST i, e)) = 
 			 			result (fn r => 
@@ -218,39 +220,32 @@ struct
 			 											src=[munchExp e1, munchExp e2], 
 			 											jump=NONE}))
 			 
-			 |	munchExp (T.BINOP(T.MINUS, T.CONST (~1), e)) = 
-			 			result (fn r => 
-			 				emit (A.OPER {assem="subfme `d0, `s0\n", 
-			 											dst=[r], 
-			 											src=[munchExp e], 
-			 											jump=NONE}))
-			 
 			 |	munchExp (T.BINOP(T.MINUS, T.CONST 0, e)) = 
 			 			result (fn r => 
-			 				emit (A.OPER {assem="subfze `d0, `s0\n", 
+			 				emit (A.OPER {assem="neg `d0, `s0\n", 
 			 											dst=[r], 
 			 											src=[munchExp e], 
 			 											jump=NONE}))
 			 
 			 |	munchExp (T.BINOP(T.MINUS, e, T.CONST 0)) = munchExp e
 			 
-			 |	munchExp (T.BINOP(T.MINUS, e, T.CONST 1)) = 
+			 |	munchExp (T.BINOP(T.MINUS, e, T.CONST i)) = 
 			 			result (fn r => 
-			 				emit (A.OPER {assem="addme `d0, `s0\n", 
+			 				emit (A.OPER {assem="addi `d0, `s0, -" ^ int i ^ "\n", 
 			 											dst=[r], 
 			 											src=[munchExp e], 
 			 											jump=NONE}))
 			 
 			 |	munchExp (T.BINOP(T.MINUS, T.CONST i, e)) = 
 			 			result (fn r => 
-			 				emit (A.OPER {assem="subfic `d0, " ^ int i ^ ", `s0\n", 
+			 				emit (A.OPER {assem="subfic `d0, `s0, " ^ int i ^ "\n", 
 			 											dst=[r], 
 			 											src=[munchExp e], 
 			 											jump=NONE}))
 			 
 			 |	munchExp (T.BINOP(T.MINUS, e1, e2)) = 
 			 			result (fn r => 
-			 				emit (A.OPER {assem="`d0, `s0\n", 
+			 				emit (A.OPER {assem="subf `d0, `s1, `s0\n", 
 			 											dst=[r], 
 			 											src=[munchExp e1, munchExp e2], 
 			 											jump=NONE}))
@@ -452,10 +447,10 @@ struct
 					 				val t = munchExp a
 					 				val argOffset = (!i * TigerFrame.wordSize) + TigerFrame.linkAreaSize
 					 			in
-					 				emit(A.OPER {assem="stw `s0, " ^ int argOffset ^ "(sp)\n", 
+					 				emit(A.OPER {assem="stw `s0, " ^ int argOffset ^ "(r1)\n", 
 					 										 dst=[], src=[t], jump=NONE});
 					 				i := !i+1;
-					 				t :: ma args' []
+					 				ma args' []
 					 			end
 					 |	ma (a::args') (r::regs) = (* copiar a en r *)
 					 			let
@@ -463,13 +458,43 @@ struct
 					 			in
 					 				emit(A.MOVE {assem="mr `d0, `s0\n", dst=r, src=t});
 					 				i := !i+1;
-					 				t :: ma args' regs
+					 				r :: ma args' regs
 					 			end 
 				in
-					ma args TigerFrame.argregs
+					ma args (TigerFrame.RV :: TigerFrame.argregs)
 				end
 			
 		in 
 			munchStm stm; rev (!ilist)
 		end
+		
+		fun literals list =
+			let
+				fun gen_code ((l,s), code) =
+					let
+						val str = valOf(String.fromString s)
+						val size = String.size str
+						val lab = TigerTemp.labelname l
+						val def = "\t.globl " ^ lab ^ "\n"
+					 					^ "\t.align 2\n"
+					 					^ lab ^ ":\n"
+					 					^ "\t.long " ^ int size ^ "\n"
+					 					^ "\t.ascii \"" ^ String.toString str ^ "\"\n"
+					in
+					 def ^ code
+					end
+			in
+				List.foldr gen_code "" list
+			end
+			
+			val sections =
+				let
+					val init = "\t.section __TEXT,__text,regular,pure_instructions\n"
+									 ^ "\t.section __TEXT,__picsymbolstub1,symbol_stubs,pure_instructions,32\n"
+									 ^ "\t.machine ppc7400\n"
+					val data = "\t.data\n"
+					val text = "\t.text\n"
+				in
+					(init, data, text)
+				end
 end

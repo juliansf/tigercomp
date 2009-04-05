@@ -19,7 +19,7 @@ sig
 	val tabSearch: ('a, 'b) Tabla -> 'a -> 'b option
 	val tabSaca : ''a * (''a, 'b) Tabla -> 'b
 	val tabRemove : (''a, 'b) Tabla -> ''a -> 'b
-	val tabAplica : ('a -> 'b) * (''c, 'a) Tabla -> (''c, 'b) Tabla
+	val tabAplica : ('a -> 'b) * ('c, 'a) Tabla -> ('c, 'b) Tabla
 	val tabAAplica : ('a -> ''c) * ('b -> 'd) * ('a, 'b) Tabla -> (''c, 'd) Tabla
 	val tabRAAplica : ('a -> ''b) * ('c -> 'd) * ('a, 'c) Tabla -> (''b, 'd) Tabla
 	val tabInserList : ('a, 'b) Tabla * ('a * 'b) list -> ('a, 'b) Tabla

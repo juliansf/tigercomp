@@ -10,4 +10,5 @@ sig
 	val labelname : label -> string
 	val tempname : temp -> string
 	val comptemps : temp * temp -> order
+	val complabels : label * label -> order
 end

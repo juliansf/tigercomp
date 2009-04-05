@@ -12,6 +12,7 @@ sig
 	val retrieve     : 'item set * 'item -> 'item
 	val peek         : 'item set * 'item -> 'item option
 	val getElement	 : 'item set -> 'item
+	val getMaxElement: ('_item * '_item -> order) -> '_item set -> '_item
 	val isEmpty      : 'item set -> bool
 	val equal        : 'item set * 'item set -> bool
 	val isSubset     : 'item set * 'item set -> bool

@@ -1,14 +1,22 @@
 (
 let 
 	var x : int := 1
-	function f() : int = 
-		let function g() : int = f() in g() end
-in x := f() end;
+	function f(y:int) : int = 
+		let function g(x:int) : int = 
+				if x <= 1 then 0 
+				else (print_int(x);f(x/2)) 
+		in g(y) end
+in 
+	x := f(10);
+	print("x = ");
+	print_int(x);
+	print("\n")
+end/*;
 
 let
 	var a:int := 1
 	function f () : int = a
 in
-	f()
-end
+	print_int(f())
+end*/
 )
