@@ -1,8 +1,10 @@
 structure TigerMakeGraph :> TigerMakeGraph =
 struct
 	open TigerError
+	open tigertab
 	
 	structure A = TigerAssem
+	structure Set = TigerSet
 	
 	fun instrs2graph linstr =
 		let

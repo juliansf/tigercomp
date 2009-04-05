@@ -1,0 +1,17 @@
+let
+	var buffer := ""
+	var x:= 0
+	
+	function skipto() =
+  	while buffer=" " | buffer="\n"
+  		do buffer := getchar()
+in
+	while (
+		buffer := getchar();
+		skipto();
+		x := ord(buffer) - ord("0"); 
+		x < 8) 
+	do (
+		print_int (x); print("\n")
+	)
+end

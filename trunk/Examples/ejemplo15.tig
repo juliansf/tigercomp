@@ -1,5 +1,7 @@
 let 
-	var x:int := 1
+	var x:int:=0
+	function f() : int = 10
+	function g() : int = f()
 in 
-	x
+	x := g()
 end

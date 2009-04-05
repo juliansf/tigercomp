@@ -16,38 +16,23 @@ fun parseError e lexbuf=
 
 fun main(tigername, args) =
 	let	
-		val arbol = ref false
 		val escapes = ref false
-		val ir = ref false
+		val arbol = ref false
 		val arbol_ir = ref false
-		val canon = ref false
 		val arbol_canon = ref false
-		val code = ref false
 		val code_list = ref false
-		val flow = ref false
-		val flowgraph = ref false
-		val inter = ref false
-		val asm = ref false
+		val asm_only = ref false
 		val output = ref false
 		val inputs = ref []
 		
 		fun option (arg, rel) =
 			case arg of
-				"-arbol" => (arbol := true; false)
-			| "-escapes" => (escapes := true; false)
-			| "-ir" => (ir := true; false)
-			| "-irtree" => (arbol_ir := true; false)
-			| "-canon" => (canon := true; false)
+				"-escapes" => (escapes := true; false)
+			|	"-arbol" => (escapes := true; false)
+			|	"-irtree" => (arbol_ir := true; false)
 			| "-canontree" => (arbol_canon := true; false)
-			| "-canon-all" => (escapes := true; ir := true; canon := true; false)
-			| "-code" => (code := true; false)
 			| "-codelist" => (code_list := true; false)
-      | "-code-all" => (escapes := true; ir := true; canon := true; code := true; false)
-			| "-flow" => (flow := true; false)
-			| "-flow-all" => (escapes := true; ir := true; canon := true; code := true; flow := true; false)
-			| "-flowgraph" => (flowgraph := true; false)
-			| "-inter" => (inter := true; false)
-			| "-s" => (asm := true; false)
+			| "-S" => (asm_only := true; false)
 			| "-o" => (output := true; true)
 			| arg => 
 					(if String.isPrefix "-" arg 
@@ -75,86 +60,94 @@ fun main(tigername, args) =
 				[] => raise ErrorNoInputFiles	tigername
 			| [file] => parseInput file
 			| files =>  raise Fail (tigername ^ ": lo siento, actualmente no soporto multiples fuentes :(.\n")
-			
-		val _ = if !escapes then tigerescap.findEscape expr else ()
-		val _ = if !arbol then tigerpp.exprAst expr else ()
-	in	
-		if !ir then 
-			let 
-				val lfrag = TigerSemant.transProg expr 
+		
+		(* Code Generation *)
+		fun codegen {body, frame} = 
+					(TigerFrame.procEntryExit2 
+						(frame, List.concat (List.map (fn s => TigerCodeGen.codegen frame s) body)), frame)
+		(* Code Generation *)
+		
+		(* Register Allocation *)
+		fun regalloc (l,f) =
+			let
+				val (l', ralloc) = TigerRegAlloc.alloc (l,f)
+				fun ralloc' t = TigerTemp.tempname(valOf(tigertab.tabSearch ralloc t))
 			in
-				if !arbol_ir then 
-					(print "\n::: IR TREE :::\n"; List.app tigerpp.ppfrag lfrag) else ();
-				
-				if !canon then
-					let
-						val lfrag = TigerCanon.canonize lfrag
-					in
-						if !arbol_canon then 
-							(print "\n::: CANONICAL TREE :::\n"; List.app tigerpp.ppCanonFrag lfrag) else ();
-						
-						if !code then
-							let
-								val literals = List.filter (fn frag => 
-											case frag of TigerCanon.LITERAL _ => true | _ => false) lfrag
-								
-								val fragments = List.filter (fn frag => 
-											case frag of TigerCanon.FUNC _ => true | _ => false) lfrag
-								
-								fun codegen (TigerCanon.FUNC {body, frame}) = 
-											(TigerFrame.procEntryExit2 
-												(frame, List.concat (List.map (fn s => TigerCodeGen.codegen frame s) body)), frame)
-								 
-								val lfrag2 = List.map codegen fragments
-							in
-								if !code_list then 
-									(print "\n::: CODE LIST :::\n";
-									List.app (fn (l,f) => 
-										List.app (print o (TigerAssem.format TigerTemp.tempname)) l) lfrag2) else ();
-								
-								if !flow then
-									let
-										fun i2g (l,f) =	
-											let 
-												val (fgraph, lnodes) = TigerMakeGraph.instrs2graph l
-											in
-												(fgraph, lnodes, l, f)
-											end
-										
-										fun flow2inter (fg, ln, li, f) =
-											let
-												val (igraph, fn2tmps) = TigerLiveness.interferenceGraph fg
-											in
-												(fg, igraph, ln, li, f)
-											end 
-										
-										val lfrag3 = List.map i2g lfrag2
-										val lfrag4 = List.map flow2inter lfrag3
-									in
-										if !flowgraph then 
-											 (print "\n\n======================\n FLOWGRAPHS \n======================\n\n";
-											  List.app (fn (TigerFlow.FGRAPH fg, ln, li, f) =>
-													TigerGraph.printGraph false (#control fg)) lfrag3;
-												
-												print "\n\n======================\n CORRESPONDENCE \n======================\n\n";
-												List.app (fn (TigerFlow.FGRAPH fg, ln, li, f) =>
-													List.app (fn (n,i) => 
-														(print (TigerGraph.nodename n ^ " -> "); 
-														 print (TigerAssem.format TigerTemp.tempname i))) (ListPair.zip (ln,li))) lfrag3;
-												
-												print "\n\n======================\n IGRAPHS \n======================\n\n";
-												List.app (fn (fg, ig, ln, li, f) =>
-													(print ("\n\n" ^ (TigerTemp.labelname (TigerFrame.getFrameLabel f)) ^ ":\n"); 
-													 TigerLiveness.show ig)) lfrag4)
-										else ()
-									end
-								else ()
-							end
-						else ()
-					end
+				(TigerFrame.procEntryExit3 (f, l'), f, ralloc')
+			end
+		(* Register Allocation *)
+		
+		(* Assembler *)
+		fun get_asm ({prolog, body, epilogue}, f, ra) =
+			let 
+				val lab = TigerFrame.getFrameLabel f
+				val fs = TigerFrame.frameSize f 
+				val asm = prolog 
+								^ (List.foldr (fn (x,y) => x^y) epilogue (List.map (TigerAssem.format ra lab fs) body))
+			in
+				asm
+			end
+		(* Assembler *)
+		
+		(* Escapes *)	
+		val _ = if !escapes then tigerescap.findEscape expr else ()
+		
+		(* AST *)
+		val _ = if !arbol then tigerpp.exprAst expr else ()
+		
+		(* Intermediate Representation *)
+		val lfrag = TigerSemant.transProg expr
+		
+		(* Canonized Code *)
+		val lfrag2 = TigerCanon.canonize lfrag
+		
+		(* Code Generation *)
+		val literals = List.mapPartial (fn frag => 
+					case frag of TigerCanon.LITERAL l => SOME l | _ => NONE) lfrag2
+		
+		val fragments = List.mapPartial (fn frag => 
+					case frag of TigerCanon.FUNC f => SOME f | _ => NONE) lfrag2
+		
+		val lfrag3 = List.map codegen fragments
+		
+		(* Register Allocation *)
+		val lfrag4 = List.map regalloc lfrag3
+		
+		(* Assembler *)								
+		val (init, data, text) = TigerCodeGen.sections
+		val asm = init
+						^ data
+						^ TigerCodeGen.literals literals
+						^ text
+						^ List.foldr (fn (x, y) => get_asm(x)^y) "" lfrag4
+		
+		
+	in	
+		if !arbol_ir then 
+			(print "\n::: IR TREE :::\n"; List.app tigerpp.ppfrag lfrag) else ();
+		if !arbol_canon then 
+			(print "\n::: CANONICAL TREE :::\n"; List.app tigerpp.ppCanonFrag lfrag2) else ();
+		if !code_list then 
+			(print "\n::: CODE LIST :::\n";
+			List.app (fn (l,f) => 
+				let val lab = TigerFrame.getFrameLabel f; val fs = TigerFrame.frameSize f in
+					List.app (print o (TigerAssem.format TigerTemp.tempname lab fs)) l 
+				end) lfrag3) else ();
+		if !asm_only then
+			print asm
+		else 
+			let
+				val name = FileSys.tmpName() ^ ".s"
+				val file = TextIO.openOut(name)
+				val _ = TextIO.output(file, asm)
+				val _ = TextIO.flushOut file
+				val out = if !output then " -o " ^ !outputName else "-o a.out"
+			in
+				print out;
+				if !output then 
+					(Process.system( "gcc -arch ppc runtime/runtime.c " ^ name ^ out );())
 				else ()
 			end
-		else ()
 	end	handle e => ShowErrors e
 
 val _ = main( CommandLine.name(), CommandLine.arguments() )

@@ -14,5 +14,5 @@ sig
 								            dst: temp,
 								            src: temp}
 	
-	val format : (temp -> string) -> instr -> string
+	val format : (temp -> string) -> TigerTemp.label -> int -> instr -> string
 end

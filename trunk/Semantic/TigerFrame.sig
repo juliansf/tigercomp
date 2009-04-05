@@ -21,6 +21,7 @@ sig
 	val calldefs : register list
 	val registers : register list
 	
+	val tempMap : (TigerTemp.temp, register) tigertab.Tabla
 
 	val wordSize : int
 	val prologSize : int
@@ -33,17 +34,19 @@ sig
 	val isLeaf : frame -> bool
 	val getMaxCallArgs : frame -> int
 	val getLocalOffset : frame -> int
-	val setMaxCallArgs : frame -> int -> unit
+	val getTempOffset : frame -> TigerTemp.temp -> int
+	val setMaxCallArgs : frame -> bool -> int -> unit
+	val frameSize : frame -> int
 	
-	val varAreaOffset : TigerTemp.label -> int
+	val varAreaOffset : TigerTemp.label -> TigerTree.varkind -> int
+	val varOffsetStr : TigerTemp.label -> TigerTree.varkind -> int -> string
 	
 	val allocLocal : frame -> bool -> access
-	val string : TigerTemp.label -> string -> string
 	val sl_access : int -> TigerTree.exp
 	val var_access : access * int * frame -> TigerTree.exp
 	
 	val procEntryExit1 : TigerTree.stm * frame -> TigerTree.stm
 	val procEntryExit2 : frame * TigerAssem.instr list -> TigerAssem.instr list
-(*	val procEntryExit3 : frame * TigerAssem.instr list -> 
-												{ prolog : string, body : TigerAssem.instr list, epiloge : string }*)
+	val procEntryExit3 : frame * TigerAssem.instr list -> 
+				{ prolog : string, body : TigerAssem.instr list, epilogue : string }
 end

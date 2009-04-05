@@ -270,6 +270,10 @@ fun stringFromExp exp =
 			|	TigerAbs.Leq => "<="
 			|	TigerAbs.Gt => ">"
 			|	TigerAbs.Geq => ">="
+	
+	fun pp_vk LOCAL = "local"
+	 |	pp_vk FORMAL = "formal"
+	 |	pp_vk RELATIVE = "relative"
 			
 	fun ppIrExp e =
 		case e of
@@ -280,7 +284,7 @@ fun stringFromExp exp =
 		|	MEM e => "MEM (" ^ ppIrExp e ^ ")"
 		|	CALL (e, el) => "CALL (" ^ ppIrExp e ^ ", [" ^ List.foldl (fn (x, y) => y ^ ppIrExp x ^ ", ") "" el ^ "\b\b])"
 		| ESEQ (s, e) => "ESEQ (" ^ ppIrStm s ^ ", " ^ ppIrExp e ^ ")"
-		| VARACCESS (n, l, e) => "VARACCESS(" ^ Int.toString n ^ ", " ^ labelname l ^ ", " ^ ppIrExp e ^ ")"
+		| VARACCESS (vk, n, l, e) => "VARACCESS(" ^ pp_vk vk ^ ", " ^ Int.toString n ^ ", " ^ labelname l ^ ", " ^ ppIrExp e ^ ")"
 														(*"BINOP(PLUS, CONST " ^ Int.toString n ^ "+" ^ TigerTemp.labelname l ^ "_varoffset, " ^ ppIrExp e ^ ")"*)
 	
 	and ppIrStm s =
@@ -351,7 +355,7 @@ fun printtree (outstream, s0) =
 	    | exp(CALL(e,el),d) = (indent d; sayln "CALL("; exp(e,d+1);
 				   app (fn a => (sayln ","; exp(a,d+2))) el;
 				   say ")")
-			| exp(VARACCESS (n, l, e),d) = (indent d; say "BINOP(PLUS"; sayln ","; indent (d+1); 
+			| exp(VARACCESS (vk, n, l, e),d) = (indent d; say "BINOP(PLUS"; sayln ","; indent (d+1); 
 					say "CONST "; say (Int.toString n); say "+"; say (TigerTemp.labelname l); sayln "_varoffset,"; exp(e,d+1); say ")")
 	
 	  and binop PLUS = say "PLUS"

@@ -1,0 +1,23 @@
+let
+	function readline() : string = 
+		let 
+			var c := getchar()
+			var str := ""
+		in
+			while c <> "\n" do (
+				str := concat(str, c);
+				c := getchar()
+			);
+			str
+		end
+	
+	var x := readline()
+	var y := readline()
+in
+	print ("x es "); if x = y then print("igual a y\n") else print("diferente a y\n");
+	print ("x es "); if x <> y then print("diferente a y\n") else print("igual a y\n");
+	print ("x es "); if x < y then print("menor que y\n") else print ("mayor o igual a y\n");
+	print ("x es "); if x <= y then print("menor o igual a y\n") else print ("mayor que y\n");
+	print ("x es "); if x > y then print("mayor que y\n") else print ("menor o igual a y\n");
+	print ("x es "); if x >= y then print("mayor o igual a y\n") else print ("menor que y\n")
+end

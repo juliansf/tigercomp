@@ -24,5 +24,6 @@ struct
 		fun tempname t = t
 		
 		val comptemps = String.compare
+		val complabels = String.compare
 	end
 end

@@ -6,6 +6,8 @@ struct
 
 	fun isInt x = case x of INT _ => true | _ => false
 	
+	fun int i = if (i < 0) then "-"^makestring(~i) else makestring(i)
+	
 	fun showtype ty = showtype' ty 2
 	and showtype' ty deep =
 		case ty of

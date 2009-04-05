@@ -1,0 +1,36 @@
+let
+	type A = array of R
+	type R = {a:int, b:string}
+	
+	var x :string:= "hola\n"
+	var z := A[4] of nil 
+	
+	function pr() = print (x)
+in
+	print(x);
+	z[0] := R{a=1, b="Julian"};
+	z[1] := R{a=2, b="Mauricio"};
+	z[2] := R{a=3, b="Osvaldo"};
+	z[3] := R{a=4, b="Analia"};
+
+	for i := 0 to 3 do (
+		print ("ID: "); print_int (z[i].a); print (" ");
+		print ("Nombre: "); print (z[i].b); print ("\n")
+	);
+	print ("hola\n");
+	print ("hola....");
+	print (x);
+	pr()
+end
+
+/*
+let
+	var a:=0
+	var b:=0
+	var c:=0
+in
+	while b < 10 do
+	  (a := a + 1;
+	  c := b * 2;
+	  b := a + 2)
+end*/
