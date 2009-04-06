@@ -16,6 +16,7 @@ fun parseError e lexbuf=
 
 fun main(tigername, args) =
 	let	
+		val outputName = ref ""
 		val escapes = ref false
 		val arbol = ref false
 		val arbol_ir = ref false
@@ -134,19 +135,32 @@ fun main(tigername, args) =
 					List.app (print o (TigerAssem.format TigerTemp.tempname lab fs)) l 
 				end) lfrag3) else ();
 		if !asm_only then
-			print asm
+			let
+				val name = if !output andalso !outputName <> "" then !outputName else
+					let
+						val toks = String.tokens (fn x => x = #".") (hd (!inputs))
+						val toks' = String.tokens (fn x => x = #"/")
+					in
+						(if List.last toks = "tig" 
+						then List.last (toks' (hd toks)) 
+						else List.last (toks' (hd (!inputs)))) ^ ".s"
+					end
+				val file = TextIO.openOut(name)
+			in
+				TextIO.output(file, asm);
+				TextIO.flushOut file;
+				TextIO.closeOut file
+			end 
 		else 
 			let
 				val name = FileSys.tmpName() ^ ".s"
 				val file = TextIO.openOut(name)
-				val _ = TextIO.output(file, asm)
-				val _ = TextIO.flushOut file
-				val out = if !output then " -o " ^ !outputName else "-o a.out"
+				val out = if !output andalso !outputName <> "" then " -o " ^ !outputName else ""
 			in
-				print out;
-				if !output then 
-					(Process.system( "gcc -arch ppc runtime/runtime.c " ^ name ^ out );())
-				else ()
+				TextIO.output(file, asm);
+				TextIO.flushOut file;
+				Process.system( "gcc -arch ppc /usr/share/tiger/runtime/runtime.c " ^ name ^ out );
+				TextIO.closeOut file
 			end
 	end	handle e => ShowErrors e
 
