@@ -17,7 +17,6 @@ fun parseError e lexbuf=
 fun main(tigername, args) =
 	let	
 		val outputName = ref ""
-		val escapes = ref false
 		val arbol = ref false
 		val arbol_ir = ref false
 		val arbol_canon = ref false
@@ -28,8 +27,7 @@ fun main(tigername, args) =
 		
 		fun option (arg, rel) =
 			case arg of
-				"-escapes" => (escapes := true; false)
-			|	"-arbol" => (escapes := true; false)
+				"-arbol" => (arbol := true; false)
 			|	"-irtree" => (arbol_ir := true; false)
 			| "-canontree" => (arbol_canon := true; false)
 			| "-codelist" => (code_list := true; false)
@@ -91,7 +89,7 @@ fun main(tigername, args) =
 		(* Assembler *)
 		
 		(* Escapes *)	
-		val _ = if !escapes then tigerescap.findEscape expr else ()
+		val _ = tigerescap.findEscape expr
 		
 		(* AST *)
 		val _ = if !arbol then tigerpp.exprAst expr else ()
@@ -159,7 +157,7 @@ fun main(tigername, args) =
 			in
 				TextIO.output(file, asm);
 				TextIO.flushOut file;
-				Process.system( "gcc -arch ppc /usr/share/tiger/runtime/runtime.c " ^ name ^ out );
+				Process.system( "gcc -arch ppc -g /usr/share/tiger/runtime/runtime.c " ^ name ^ out );
 				TextIO.closeOut file
 			end
 	end	handle e => ShowErrors e
