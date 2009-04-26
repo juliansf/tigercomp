@@ -54,6 +54,7 @@ end
    else (printint(l.first); print(" "); printlist(l.rest))
 
    var list1 := readlist()
+   var x := (print("hola\n");printlist(list1);1)
    var list2 := (buffer:=getchar(); readlist())
 
 
