@@ -157,7 +157,7 @@ fun main(tigername, args) =
 			in
 				TextIO.output(file, asm);
 				TextIO.flushOut file;
-				Process.system( "gcc -arch ppc -g /usr/share/tiger/runtime/runtime.c " ^ name ^ out );
+				Process.system( "gcc -arch ppc -g /usr/share/tiger/lib/runtime.c " ^ name ^ out );
 				TextIO.closeOut file
 			end
 	end	handle e => ShowErrors e

@@ -1,4 +1,5 @@
 # Unix makefile for tigermain
+TIGERHOME=/usr/share/tiger
 
 HOME=/usr/share
 MOSMLHOME=${HOME}/mosml
@@ -35,6 +36,9 @@ LIVE=Liveness
 COLOR=Color
 MISC=Misc
 BIN=bin
+LIB=runtime
+
+EXPORTBIN="# Tiger Compiler\nexport PATH=$(TIGERHOME)/bin:$PATH"
 
 LOADPATH=-I $(LEXER) -I $(PARSER) -I $(MISC) -I $(SEMANTIC) -I $(CANON) -I $(CODEGEN) -I $(LIVE) -I $(COLOR)
 
@@ -74,9 +78,30 @@ GRALOBJS= \
 
 all: tiger
 
-tiger: $(GRALOBJS) $(OBJSGEN)
+install: 
+	@if test -f $(BIN)/tiger$(EXEFILE); then \
+		mkdir -p $(TIGERHOME) $(TIGERHOME)/bin $(TIGERHOME)/lib; \
+		cp $(BIN)/tiger$(EXEFILE) $(TIGERHOME)/bin/; \
+		cp $(LIB)/runtime.c $(TIGERHOME)/lib/; \
+		if test -f ~/.profile; then \
+			echo $(EXPORTBIN) >> ~/.profile; \
+		elif test -f ~/.bashrc; then \
+			echo $(EXPORTBIN) >> ~/.bashrc; \
+	      	else \
+			echo "Agrega $(TIGERHOME)/bin a tu path!"; \
+		fi; \
+		echo "Instalacion finalizada!"; \
+	else "Debes hacer primero \"make depend; make\"."; \
+	fi;
+
+tiger: modrtpath $(GRALOBJS) $(OBJSGEN)
 	if ! test -d $(BIN); then mkdir $(BIN); fi; \
-	$(MOSMLL) $(LOADPATH) -o $(BIN)/tiger$(EXEFILE) tigermain.uo
+	$(MOSMLL) $(LOADPATH) -o $(BIN)/tiger$(EXEFILE) tigermain.uo; \
+	mv tigermain.sml.bak tigermain.sml;
+
+modrtpath: 
+	cp tigermain.sml tigermain.sml.bak; \
+	sed -i '' -e 's;RUNTIMEPATH;$(TIGERHOME)/lib;g;' tigermain.sml;
 
 Parser.sml Parser.sig: $(PARSER)/Parser.y 
 	$(MOSMLYACC) $(PARSER)/Parser.y
@@ -94,46 +119,46 @@ test:
 	$(MOSMLC) $(LOADPATH) test.sml
 	if ! test -d $(BIN); then mkdir $(BIN); fi; \
 	$(MOSMLL) $(LOADPATH) -o $(BIN)/test$(EXEFILE) test.uo
-	
+
 clean:
 	$(REMOVE) Makefile.bak
-	
+
 	$(CD) $(PARSER);\
 	$(REMOVE) Parser.output;\
 	$(REMOVE) Parser.sig;\
 	$(REMOVE) Parser.sml;\
 	$(REMOVE) *.ui;\
 	$(REMOVE) *.uo
-	
+
 	$(CD) $(LEXER);\
 	$(REMOVE) Scanner.sml;\
 	$(REMOVE) *.ui;\
 	$(REMOVE) *.uo
-	
+
 	$(CD) $(MISC);\
 	$(REMOVE) *.ui;\
 	$(REMOVE) *.uo
-	
+
 	$(CD) $(SEMANTIC);\
 	$(REMOVE) *.ui;\
 	$(REMOVE) *.uo
-	
+
 	$(CD) $(CANON);\
 	$(REMOVE) *.ui;\
 	$(REMOVE) *.uo
-	
+
 	$(CD) $(CODEGEN);\
 	$(REMOVE) *.ui;\
 	$(REMOVE) *.uo
-	
+
 	$(CD) $(LIVE);\
 	$(REMOVE) *.ui;\
 	$(REMOVE) *.uo
-	
+
 	$(CD) $(COLOR);\
 	$(REMOVE) *.ui;\
 	$(REMOVE) *.uo
-	
+
 	$(REMOVE) tigermain
 	$(REMOVE) *.ui
 	$(REMOVE) *.uo
@@ -203,7 +228,7 @@ TigerRegAlloc.uo:
 
 tigerpp.uo:
 	$(MOSMLC) $(LOADPATH) $(MISC)/tigerpp.sml
-	
+
 #.sml.uo:
 #	$(MOSMLC) $<
 

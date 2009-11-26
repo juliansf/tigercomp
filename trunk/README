@@ -1,0 +1,12 @@
+Editar, segun preferencias, del archivo Makefile, las siguientes variables:
+
+TIGERHOME=/usr/share/tiger # Directorio donde se intalaran los binarios y las librerias
+MOSMLHOME=${HOME}/mosml # Directorio donde se encuentra instalado mosml
+
+Para instalar:
+
+make depend
+make
+sudo make install
+
+
